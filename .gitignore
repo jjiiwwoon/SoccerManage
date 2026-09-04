@@ -23,3 +23,7 @@ desktop.ini
 
 # === Zip files (불필요한 압축파일) ===
 *.zip
+
+# === Claude outputs ===
+Claude outputs/
+frontend/src/Claude outputs/
