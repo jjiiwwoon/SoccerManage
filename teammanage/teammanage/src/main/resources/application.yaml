@@ -1,0 +1,42 @@
+# ====================================
+# 파일: application.yml
+# 분야: 백엔드 / 설정
+# 기능: Spring Boot 앱 전체 설정
+# ====================================
+#
+# Spring Initializr에서 YAML 선택했으니까
+# 이 형식으로 설정을 작성해.
+#
+# 지금은 개발용(H2 데이터베이스) 설정이야.
+# 나중에 배포할 때 PostgreSQL로 바꿀 거야.
+
+spring:
+  # H2 데이터베이스 설정 (개발용 - 설치 없이 바로 사용 가능)
+  datasource:
+    url: jdbc:h2:mem:teammanage    # 메모리 DB (앱 끄면 데이터 사라짐)
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  # H2 웹 콘솔 (브라우저에서 DB 내용을 직접 볼 수 있어!)
+  # → http://localhost:8080/h2-console 에서 접속
+  h2:
+    console:
+      enabled: true                # 콘솔 활성화
+      path: /h2-console            # 접속 경로
+
+  # JPA 설정
+  jpa:
+    hibernate:
+      ddl-auto: create-drop        # 앱 시작할 때 테이블 자동 생성, 끄면 삭제
+        # → 개발할 때 편함 (코드 바꾸면 테이블도 자동으로 바뀌니까)
+      # → 나중에 배포할 때는 'update'로 바꿀 거야
+    show-sql: true                 # JPA가 만든 SQL을 콘솔에 보여줘
+    # → 어떤 SQL이 실행되는지 공부할 수 있어!
+    properties:
+      hibernate:
+        format_sql: true           # SQL을 보기 좋게 줄바꿈해서 보여줘
+
+# 서버 포트 (기본값이 8080이라 안 써도 되지만 명시적으로)
+server:
+  port: 8080
