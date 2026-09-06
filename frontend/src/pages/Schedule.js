@@ -34,10 +34,16 @@ function Schedule() {
     const [newSchedule, setNewSchedule] = useState({
         matchDate: '',
         matchTime: '',
+        matchEndTime: '',
         location: '',
         opponent: '',
         memo: '',
     });
+
+    // 날짜 직접 선택용 상태
+    const [dateYear, setDateYear] = useState('');
+    const [dateMonth, setDateMonth] = useState('');
+    const [dateDay, setDateDay] = useState('');
 
     // 결과 입력 폼
     const [resultData, setResultData] = useState({
@@ -122,18 +128,47 @@ function Schedule() {
         }
     }
 
+    // 날짜 select 동기화 함수
+    function syncDateSelects(dateStr) {
+        if (dateStr) {
+            const parts = dateStr.split('-');
+            setDateYear(parts[0]);
+            setDateMonth(parts[1]);
+            setDateDay(parts[2]);
+        }
+    }
+
+    function handleDateSelectChange(y, m, d) {
+        setDateYear(y);
+        setDateMonth(m);
+        setDateDay(d);
+        if (y && m && d) {
+            const dateStr = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+            setNewSchedule(prev => ({ ...prev, matchDate: dateStr }));
+        }
+    }
+
+    // 해당 월의 일수 계산
+    function getDaysInMonth(y, m) {
+        if (!y || !m) return 31;
+        return new Date(parseInt(y), parseInt(m), 0).getDate();
+    }
+
     // ========== 일정 등록 ==========
     function openRegisterForm() {
+        const today = new Date();
         const dateStr = selectedDate
             ? `${year}-${String(month + 1).padStart(2, '0')}-${String(selectedDate).padStart(2, '0')}`
-            : '';
+            : `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
         setNewSchedule({
             matchDate: dateStr,
             matchTime: '',
+            matchEndTime: '',
             location: '',
             opponent: '',
             memo: '',
         });
+        syncDateSelects(dateStr);
         setShowRegisterForm(true);
     }
 
@@ -147,6 +182,7 @@ function Schedule() {
             await createMatch({
                 matchDate: newSchedule.matchDate,
                 matchTime: newSchedule.matchTime || null,
+                matchEndTime: newSchedule.matchEndTime || null,
                 location: newSchedule.location || null,
                 opponent: newSchedule.opponent,
                 memo: newSchedule.memo || null,
@@ -218,6 +254,7 @@ function Schedule() {
             await updateMatch(selectedMatch.id, {
                 matchDate: selectedMatch.matchDate,
                 matchTime: selectedMatch.matchTime,
+                matchEndTime: selectedMatch.matchEndTime,
                 opponent: selectedMatch.opponent,
                 location: selectedMatch.location,
                 memo: selectedMatch.memo,
@@ -309,14 +346,35 @@ function Schedule() {
                 if (result === 'upcoming') className += ' upcoming';
             }
 
+            // 결과 약자 + 색상
+            function getResultShort(r) {
+                if (r === 'win') return { label: 'W', className: 'result-w' };
+                if (r === 'draw') return { label: 'D', className: 'result-d' };
+                if (r === 'lose') return { label: 'L', className: 'result-l' };
+                return null;
+            }
+
             cells.push(
                 <div
                     key={day}
                     className={className}
                     onClick={() => handleDateClick(day)}
                 >
-                    {day}
-                    {match && <span className="match-dot" />}
+                    <span className="calendar-day-number">{day}</span>
+                    {match && result === 'upcoming' && (
+                        <span className="calendar-match-info upcoming-label">
+                            <span className="match-day-text">Match Day</span>
+                            <span className="match-opponent-sub">vs {match.opponent}</span>
+                        </span>
+                    )}
+                    {match && result !== 'upcoming' && (
+                        <span className="calendar-match-info">
+                            <span className="match-opponent-text">vs {match.opponent}</span>
+                            <span className={`result-short ${getResultShort(result)?.className}`}>
+                                {getResultShort(result)?.label}
+                            </span>
+                        </span>
+                    )}
                 </div>
             );
         }
@@ -374,6 +432,7 @@ function Schedule() {
                                 <div style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginBottom: '8px' }}>
                                     {selectedMatch.matchDate}
                                     {selectedMatch.matchTime && ` ${selectedMatch.matchTime}`}
+                                    {selectedMatch.matchEndTime && `~${selectedMatch.matchEndTime}`}
                                     {selectedMatch.location && ` · ${selectedMatch.location}`}
                                 </div>
                                 <div className="teams">
@@ -487,24 +546,6 @@ function Schedule() {
                         </div>
                     )}
 
-                    {/* 범례 */}
-                    <div className="legend-card" style={{ marginTop: '16px' }}>
-                        <div style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: '8px', color: 'var(--color-dark)' }}>
-                            범례
-                        </div>
-                        <div className="legend-item">
-                            <span className="legend-dot" style={{ borderColor: 'var(--color-gold)', backgroundColor: 'rgba(200,168,78,0.2)' }} />
-                            <span>경기 완료</span>
-                        </div>
-                        <div className="legend-item">
-                            <span className="legend-dot" style={{ borderColor: 'var(--color-df)', backgroundColor: 'rgba(59,130,246,0.2)' }} />
-                            <span>경기 예정</span>
-                        </div>
-                        <div className="legend-item">
-                            <span className="legend-dot" style={{ borderColor: 'var(--color-dark)', backgroundColor: 'var(--color-dark)' }} />
-                            <span>선택된 날짜</span>
-                        </div>
-                    </div>
                 </div>
             </div>
 
@@ -515,27 +556,127 @@ function Schedule() {
                         <form onSubmit={handleRegisterSubmit}>
                             <div className="form-title">일정 등록</div>
                             <div className="form-grid">
-                                <div className="form-group">
-                                    <label className="form-label">날짜 *</label>
-                                    <input
-                                        type="date"
-                                        className="form-input"
-                                        value={newSchedule.matchDate}
-                                        onChange={(e) => setNewSchedule({ ...newSchedule, matchDate: e.target.value })}
-                                        required
-                                    />
+                                <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                                    <label className="form-label date-label-with-icon">
+                                        날짜
+                                        <span className="date-icon-wrap">
+                                            <span className="date-icon-trigger">📅</span>
+                                            <input
+                                                type="date"
+                                                className="date-hidden-input"
+                                                value={newSchedule.matchDate}
+                                                onChange={(e) => {
+                                                    setNewSchedule({ ...newSchedule, matchDate: e.target.value });
+                                                    syncDateSelects(e.target.value);
+                                                }}
+                                                title="달력에서 선택"
+                                            />
+                                        </span>
+                                    </label>
+                                    <div className="date-picker-row">
+                                        <select
+                                            className="form-input date-select"
+                                            value={dateYear}
+                                            onChange={(e) => handleDateSelectChange(e.target.value, dateMonth, dateDay)}
+                                            required
+                                        >
+                                            <option value="">년</option>
+                                            {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 1 + i).map(y => (
+                                                <option key={y} value={String(y)}>{y}년</option>
+                                            ))}
+                                        </select>
+                                        <select
+                                            className="form-input date-select"
+                                            value={dateMonth}
+                                            onChange={(e) => handleDateSelectChange(dateYear, e.target.value, dateDay)}
+                                            required
+                                        >
+                                            <option value="">월</option>
+                                            {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                                                <option key={m} value={String(m).padStart(2, '0')}>{m}월</option>
+                                            ))}
+                                        </select>
+                                        <select
+                                            className="form-input date-select"
+                                            value={dateDay}
+                                            onChange={(e) => handleDateSelectChange(dateYear, dateMonth, e.target.value)}
+                                            required
+                                        >
+                                            <option value="">일</option>
+                                            {Array.from({ length: getDaysInMonth(dateYear, dateMonth) }, (_, i) => i + 1).map(d => (
+                                                <option key={d} value={String(d).padStart(2, '0')}>{d}일</option>
+                                            ))}
+                                        </select>
+                                    </div>
                                 </div>
                                 <div className="form-group">
-                                    <label className="form-label">시간</label>
-                                    <input
-                                        type="time"
-                                        className="form-input"
-                                        value={newSchedule.matchTime}
-                                        onChange={(e) => setNewSchedule({ ...newSchedule, matchTime: e.target.value })}
-                                    />
+                                    <label className="form-label">시작 시간</label>
+                                    <div className="time-picker-row">
+                                        <select
+                                            className="form-input time-select"
+                                            value={newSchedule.matchTime ? newSchedule.matchTime.split(':')[0] : ''}
+                                            onChange={(e) => {
+                                                const hour = e.target.value;
+                                                const min = newSchedule.matchTime ? newSchedule.matchTime.split(':')[1] : '00';
+                                                setNewSchedule({ ...newSchedule, matchTime: hour ? `${hour}:${min}` : '' });
+                                            }}
+                                        >
+                                            <option value="">시</option>
+                                            {Array.from({ length: 24 }, (_, i) => i).map(h => (
+                                                <option key={h} value={String(h).padStart(2, '0')}>{String(h).padStart(2, '0')}시</option>
+                                            ))}
+                                        </select>
+                                        <select
+                                            className="form-input time-select"
+                                            value={newSchedule.matchTime ? newSchedule.matchTime.split(':')[1] : ''}
+                                            onChange={(e) => {
+                                                const hour = newSchedule.matchTime ? newSchedule.matchTime.split(':')[0] : '00';
+                                                const min = e.target.value;
+                                                setNewSchedule({ ...newSchedule, matchTime: min ? `${hour}:${min}` : '' });
+                                            }}
+                                        >
+                                            <option value="">분</option>
+                                            {Array.from({ length: 60 }, (_, i) => i).map(m => (
+                                                <option key={m} value={String(m).padStart(2, '0')}>{String(m).padStart(2, '0')}분</option>
+                                            ))}
+                                        </select>
+                                    </div>
                                 </div>
                                 <div className="form-group">
-                                    <label className="form-label">상대팀 *</label>
+                                    <label className="form-label">종료 시간</label>
+                                    <div className="time-picker-row">
+                                        <select
+                                            className="form-input time-select"
+                                            value={newSchedule.matchEndTime ? newSchedule.matchEndTime.split(':')[0] : ''}
+                                            onChange={(e) => {
+                                                const hour = e.target.value;
+                                                const min = newSchedule.matchEndTime ? newSchedule.matchEndTime.split(':')[1] : '00';
+                                                setNewSchedule({ ...newSchedule, matchEndTime: hour ? `${hour}:${min}` : '' });
+                                            }}
+                                        >
+                                            <option value="">시</option>
+                                            {Array.from({ length: 24 }, (_, i) => i).map(h => (
+                                                <option key={h} value={String(h).padStart(2, '0')}>{String(h).padStart(2, '0')}시</option>
+                                            ))}
+                                        </select>
+                                        <select
+                                            className="form-input time-select"
+                                            value={newSchedule.matchEndTime ? newSchedule.matchEndTime.split(':')[1] : ''}
+                                            onChange={(e) => {
+                                                const hour = newSchedule.matchEndTime ? newSchedule.matchEndTime.split(':')[0] : '00';
+                                                const min = e.target.value;
+                                                setNewSchedule({ ...newSchedule, matchEndTime: min ? `${hour}:${min}` : '' });
+                                            }}
+                                        >
+                                            <option value="">분</option>
+                                            {Array.from({ length: 60 }, (_, i) => i).map(m => (
+                                                <option key={m} value={String(m).padStart(2, '0')}>{String(m).padStart(2, '0')}분</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">상대팀</label>
                                     <input
                                         type="text"
                                         className="form-input"
@@ -561,7 +702,7 @@ function Schedule() {
                                 <input
                                     type="text"
                                     className="form-input"
-                                    placeholder="메모 (선택사항)"
+                                    placeholder="메모"
                                     value={newSchedule.memo}
                                     onChange={(e) => setNewSchedule({ ...newSchedule, memo: e.target.value })}
                                 />
@@ -589,7 +730,7 @@ function Schedule() {
                     <div className="modal-content modal-large" onClick={(e) => e.stopPropagation()}>
                         <form onSubmit={handleResultSubmit}>
                             <div className="form-title">
-                                결과 입력 — vs {selectedMatch.opponent}
+                                {getResult(selectedMatch) === 'upcoming' ? '결과 입력' : '결과 수정'} — vs {selectedMatch.opponent}
                             </div>
                             <div style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginBottom: '16px' }}>
                                 {selectedMatch.matchDate}
@@ -713,7 +854,7 @@ function Schedule() {
                                     취소
                                 </button>
                                 <button type="submit" className="btn btn-gold">
-                                    결과 저장
+                                    {getResult(selectedMatch) === 'upcoming' ? '결과 저장' : '결과 수정'}
                                 </button>
                             </div>
                         </form>

@@ -340,6 +340,39 @@ body {
     text-align: right;
 }
 
+/* ===== Stats Table (개인기록 테이블 - 고정 열 너비) ===== */
+.stats-table {
+    table-layout: fixed;
+    width: 100%;
+}
+
+.stats-table .col-number {
+    width: 60px;
+    white-space: nowrap;
+}
+
+.stats-table .col-name {
+    width: 100px;
+}
+
+.stats-table .col-position {
+    width: 90px;
+}
+
+.stats-table .col-stat {
+    width: auto;
+}
+
+.stats-table th.sortable {
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.2s;
+}
+
+.stats-table th.sortable:hover {
+    background-color: var(--color-dark-light);
+}
+
 /* ===== Filter Tabs ===== */
 .filter-tabs {
     display: flex;
@@ -368,6 +401,31 @@ body {
 .filter-tab.active {
     background-color: var(--color-dark);
     border-color: var(--color-dark);
+    color: white;
+}
+
+/* 포지션별 필터 탭 active 색상 */
+.filter-tab.active.filter-tab-gk {
+    background-color: var(--color-gk);
+    border-color: var(--color-gk);
+    color: white;
+}
+
+.filter-tab.active.filter-tab-df {
+    background-color: var(--color-df);
+    border-color: var(--color-df);
+    color: white;
+}
+
+.filter-tab.active.filter-tab-mf {
+    background-color: var(--color-mf);
+    border-color: var(--color-mf);
+    color: white;
+}
+
+.filter-tab.active.filter-tab-fw {
+    background-color: var(--color-fw);
+    border-color: var(--color-fw);
     color: white;
 }
 
@@ -728,6 +786,114 @@ body {
     color: var(--color-fw);
 }
 
+/* 프로필 사진이 있는 선수 아바타 */
+.player-avatar-img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+/* 선수 등록 - 프로필 사진 업로드 */
+.profile-upload-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.profile-upload-preview {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    background: var(--color-bg);
+    border: 2px dashed var(--color-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    overflow: hidden;
+    transition: border-color 0.2s;
+}
+
+.profile-upload-preview:hover {
+    border-color: var(--color-gold);
+}
+
+.profile-upload-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+.profile-upload-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 스쿼드 툴바 (필터 + 검색) */
+.squad-toolbar {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.squad-toolbar .filter-tabs {
+    margin-bottom: 0;
+}
+
+.squad-search {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.squad-search .search-input {
+    padding-right: 32px;
+}
+
+.search-clear {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    font-size: 0.85rem;
+    padding: 2px 4px;
+    line-height: 1;
+}
+
+.search-clear:hover {
+    color: var(--color-text);
+}
+
+/* 선수 카드 hover 시 편집 힌트 */
+.player-card {
+    cursor: pointer;
+}
+
+.player-card::after {
+    content: '✏️';
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    opacity: 0;
+    font-size: 0.9rem;
+    transition: opacity 0.2s;
+}
+
+.player-card:hover::after {
+    opacity: 0.5;
+}
+
 /* ===== Calendar (Schedule) ===== */
 .schedule-layout {
     display: grid;
@@ -790,15 +956,20 @@ body {
 .calendar-cell {
     aspect-ratio: 1;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     font-size: 0.9rem;
     border-radius: var(--radius-sm);
     cursor: pointer;
     transition: all 0.15s;
     border: 2px solid transparent;
     position: relative;
+    padding: 4px 2px 2px;
+    overflow: hidden;
 }
+
+
 
 .calendar-cell:hover {
     background-color: var(--color-bg);
@@ -810,7 +981,7 @@ body {
 }
 
 .calendar-cell.has-match {
-    border-color: var(--color-gold);
+    border-color: #94a3b8;
     font-weight: 600;
 }
 
@@ -819,9 +990,10 @@ body {
 }
 
 .calendar-cell.selected {
-    background-color: var(--color-dark);
-    color: white;
-    border-color: var(--color-dark);
+    background-color: rgba(22, 163, 74, 0.12);
+    color: #16a34a;
+    border-color: #16a34a;
+    font-weight: 700;
 }
 
 .calendar-cell.other-month {
@@ -829,13 +1001,67 @@ body {
     opacity: 0.4;
 }
 
-.match-dot {
-    position: absolute;
-    bottom: 4px;
-    width: 4px;
-    height: 4px;
-    border-radius: 50%;
-    background-color: var(--color-gold);
+.calendar-day-number {
+    font-size: 0.9rem;
+    line-height: 1;
+}
+
+.calendar-match-info {
+    font-size: 0.75rem;
+    line-height: 1.3;
+    text-align: center;
+    color: var(--color-dark);
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.calendar-match-info.upcoming-label {
+    color: var(--color-df);
+    font-weight: 700;
+    font-size: 0.75rem;
+}
+
+.match-day-text {
+    display: block;
+}
+
+.match-opponent-sub {
+    display: block;
+    font-size: 0.65rem;
+    font-weight: 500;
+    color: var(--color-text-muted);
+    margin-top: 1px;
+}
+
+.match-opponent-text {
+    display: block;
+}
+
+.result-short {
+    font-weight: 700;
+    display: block;
+    margin-top: 1px;
+    font-size: 0.8rem;
+}
+
+.result-short.result-w {
+    color: var(--color-win);
+}
+
+.result-short.result-d {
+    color: var(--color-draw);
+}
+
+.result-short.result-l {
+    color: var(--color-lose);
 }
 
 /* ===== Match Detail Sidebar ===== */
@@ -887,30 +1113,6 @@ body {
     color: var(--color-gold);
 }
 
-/* ===== Legend Card ===== */
-.legend-card {
-    margin-top: 16px;
-    padding: 16px;
-    background: var(--color-bg);
-    border-radius: var(--radius-sm);
-}
-
-.legend-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 4px 0;
-    font-size: 0.8rem;
-    color: var(--color-text-light);
-}
-
-.legend-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    border: 2px solid;
-    flex-shrink: 0;
-}
 
 /* ===== Registration Form (Squad) ===== */
 .register-form {
@@ -940,6 +1142,62 @@ body {
 
 .form-grid .form-group.full-width {
     grid-column: 1 / -1;
+}
+
+/* ===== Date Label with Calendar Icon ===== */
+.date-label-with-icon {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.date-icon-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.date-icon-trigger {
+    font-size: 1.1rem;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.date-hidden-input {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+    border: none;
+    padding: 0;
+}
+
+/* ===== Date Picker Row ===== */
+.date-picker-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.date-picker-row .date-select {
+    flex: 1;
+    min-width: 0;
+}
+
+/* ===== Time Picker Row ===== */
+.time-picker-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.time-picker-row .time-select {
+    flex: 1;
+    min-width: 0;
 }
 
 /* ===== Summary Stat Cards ===== */

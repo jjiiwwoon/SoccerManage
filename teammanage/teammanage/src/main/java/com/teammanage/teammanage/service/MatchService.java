@@ -54,8 +54,9 @@ public class MatchService {
         match.setOurScore(matchData.getOurScore());
         match.setOpponentScore(matchData.getOpponentScore());
         match.setLocation(matchData.getLocation());
-        match.setMatchTime(matchData.getMatchTime());   // 새로 추가
-        match.setMemo(matchData.getMemo());               // 새로 추가
+        match.setMatchTime(matchData.getMatchTime());
+        match.setMatchEndTime(matchData.getMatchEndTime());
+        match.setMemo(matchData.getMemo());
 
         // 스코어가 있으면 결과 자동 계산, 없으면 null (예정)
         if (match.getOurScore() != null && match.getOpponentScore() != null) {

@@ -1,13 +1,13 @@
 /**
  * ====================================
- * 파일: TeamRecords.js (새 파일)
+ * 파일: TeamRecords.js (수정됨)
  * 위치: frontend/src/pages/TeamRecords.js
  * 기능: 팀 전적 테이블 + 경기 결과 리스트
  * ====================================
  *
- * 디자인의 팀기록 페이지 구현:
- * - 상단: 팀 전적 요약 (경기, 승, 무, 패, 승률, 득점, 실점)
- * - 하단: 전체 경기 결과 리스트 (필터: 전체/승리/무승부/패배)
+ * 변경사항:
+ * - 예정 경기(스코어 없음)를 통계 및 리스트에서 제외
+ * - 완료된 경기만 승/무/패 계산에 포함
  */
 import React, { useState, useEffect } from 'react';
 import { getMatches } from '../api/matchApi';
@@ -44,17 +44,20 @@ function TeamRecords() {
         return '패배';
     }
 
-    // 통계 계산
-    const totalMatches = matches.length;
-    const wins = matches.filter(m => getResult(m) === 'win').length;
-    const draws = matches.filter(m => getResult(m) === 'draw').length;
-    const losses = matches.filter(m => getResult(m) === 'lose').length;
-    const winRate = totalMatches > 0 ? ((wins / totalMatches) * 100).toFixed(1) : '0.0';
-    const totalGoals = matches.reduce((sum, m) => sum + (m.ourScore || 0), 0);
-    const totalConceded = matches.reduce((sum, m) => sum + (m.opponentScore || 0), 0);
+    // 완료된 경기만 필터 (스코어가 입력된 경기)
+    const completedMatches = matches.filter(m => m.ourScore != null && m.opponentScore != null);
 
-    // 필터링된 경기 목록
-    const filteredMatches = matches
+    // 통계 계산 (완료된 경기 기준)
+    const totalMatches = completedMatches.length;
+    const wins = completedMatches.filter(m => getResult(m) === 'win').length;
+    const draws = completedMatches.filter(m => getResult(m) === 'draw').length;
+    const losses = completedMatches.filter(m => getResult(m) === 'lose').length;
+    const winRate = totalMatches > 0 ? ((wins / totalMatches) * 100).toFixed(1) : '0.0';
+    const totalGoals = completedMatches.reduce((sum, m) => sum + (m.ourScore || 0), 0);
+    const totalConceded = completedMatches.reduce((sum, m) => sum + (m.opponentScore || 0), 0);
+
+    // 필터링된 경기 목록 (완료된 경기 중에서만)
+    const filteredMatches = completedMatches
         .filter(m => {
             if (filter === 'all') return true;
             return getResult(m) === filter;

@@ -31,7 +31,9 @@ public class Match {
 
     private LocalDate matchDate;    // 경기 날짜
 
-    private String matchTime;       // 경기 시간 (예: "14:00") — 새로 추가
+    private String matchTime;       // 경기 시작 시간 (예: "14:00")
+
+    private String matchEndTime;    // 경기 종료 시간 (예: "16:00") — 새로 추가
 
     private String opponent;        // 상대팀 이름
 

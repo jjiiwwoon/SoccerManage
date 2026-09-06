@@ -7,11 +7,12 @@
 # 변경 내용:
 # - spring.servlet.multipart 추가: 파일 업로드 크기 제한 설정
 # - file.upload-dir 추가: 업로드 파일 저장 경로
+# - H2 파일 모드로 변경: 서버 꺼도 데이터 유지
 
 spring:
   # H2 데이터베이스 설정 (개발용 - 설치 없이 바로 사용 가능)
   datasource:
-    url: jdbc:h2:mem:teammanage    # 메모리 DB (앱 끄면 데이터 사라짐)
+    url: jdbc:h2:file:./data/teammanage    # 파일 DB (서버 꺼도 데이터 유지!)
     driver-class-name: org.h2.Driver
     username: sa
     password:
@@ -26,9 +27,7 @@ spring:
   # JPA 설정
   jpa:
     hibernate:
-      ddl-auto: create-drop        # 앱 시작할 때 테이블 자동 생성, 끄면 삭제
-      # → 개발할 때 편함 (코드 바꾸면 테이블도 자동으로 바뀌니까)
-      # → 나중에 배포할 때는 'update'로 바꿀 거야
+      ddl-auto: update             # 기존 데이터 유지하면서 테이블 변경사항만 반영
     show-sql: true                 # JPA가 만든 SQL을 콘솔에 보여줘
     # → 어떤 SQL이 실행되는지 공부할 수 있어!
     properties:

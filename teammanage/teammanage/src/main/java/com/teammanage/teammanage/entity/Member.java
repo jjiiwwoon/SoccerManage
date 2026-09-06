@@ -2,14 +2,13 @@
  * ====================================
  * 파일: Member.java (수정됨)
  * 위치: entity 패키지 (기존 파일 덮어쓰기)
- * 기능: 팀 멤버 정보 + SNS 링크 추가
+ * 기능: 팀 멤버 정보 + 프로필 사진 Base64 추가
  * ====================================
  *
- * 기존: name, position, backNumber, profileImage, role
- * 추가: youtubeLink, instagramLink, snsLink (외부 링크 기능)
- *
- * 인스타, 유튜브, 기타 SNS 주소를 저장해서
- * 프로필에서 클릭하면 해당 페이지로 이동하게 해.
+ * 변경사항:
+ * - profilePhoto (Base64 TEXT) 필드 추가
+ * - profilePhotoFileName 필드 추가
+ * - 기존 profileImage 필드 유지 (하위 호환)
  */
 package com.teammanage.teammanage.entity;
 
@@ -31,15 +30,21 @@ public class Member {
 
     private Integer backNumber;      // 등번호
 
-    private String profileImage;     // 프로필 사진 URL
+    private String profileImage;     // 프로필 사진 URL (기존)
+
+    @Lob
+    @Column(columnDefinition = "TEXT")
+    private String profilePhoto;     // 프로필 사진 Base64 (신규)
+
+    private String profilePhotoFileName;  // 프로필 사진 파일명
 
     @Enumerated(EnumType.STRING)
     private MemberRole role;         // 역할 (CAPTAIN, MANAGER, MEMBER)
 
-    // --- SNS 링크 (새로 추가) ---
+    // --- SNS 링크 ---
     private String youtubeLink;      // 유튜브 링크
 
     private String instagramLink;    // 인스타그램 링크
 
-    private String snsLink;          // 기타 SNS 링크 (트위터, 팀 홈페이지 등)
+    private String snsLink;          // 기타 SNS 링크
 }

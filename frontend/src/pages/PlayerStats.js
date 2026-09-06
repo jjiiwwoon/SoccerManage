@@ -1,15 +1,16 @@
 /**
  * ====================================
- * 파일: PlayerStats.js (새 파일)
+ * 파일: PlayerStats.js (수정됨)
  * 위치: frontend/src/pages/PlayerStats.js
  * 기능: 개인기록 페이지 - 선수별 스탯 테이블
  * ====================================
  *
- * 디자인의 개인기록 페이지 구현:
- * - 선수별 경기, 쿼터, 득점, 어시스트, 공헌점 테이블
- * - 포지션 배지 (GK/DF/MF/FW 색상 구분)
- * - 정렬 기능 (포지션별 필터 + 검색)
- * - 하단 요약 카드 (총 득점, 총 어시스트, 경기 참여, 최고 득점자)
+ * 변경사항:
+ * - 포지션 필터 탭 색상 적용 (GK/DF/MF/FW)
+ * - No. → 순위 (공동순위 지원)
+ * - 공헌점 → 공격포인트
+ * - 정렬: 오름차순/내림차순 토글 + 화살표 표시
+ * - 테이블 열 너비 고정 (클릭해도 칸 변동 없음)
  */
 import React, { useState, useEffect } from 'react';
 import { getMembers } from '../api/memberApi';
@@ -21,7 +22,8 @@ function PlayerStats() {
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('all');
     const [searchTerm, setSearchTerm] = useState('');
-    const [sortBy, setSortBy] = useState('goals'); // goals, assists, matches, contribution
+    const [sortBy, setSortBy] = useState('goals');
+    const [sortDir, setSortDir] = useState('desc'); // 'asc' 또는 'desc'
 
     useEffect(() => {
         async function fetchData() {
@@ -32,10 +34,8 @@ function PlayerStats() {
                 ]);
                 setMembers(membersData);
 
-                // 각 경기의 스탯을 모아서 선수별로 집계
                 const allStats = {};
 
-                // 멤버 초기화
                 membersData.forEach(member => {
                     allStats[member.id] = {
                         id: member.id,
@@ -49,8 +49,10 @@ function PlayerStats() {
                     };
                 });
 
-                // 각 경기의 스탯 가져오기
-                for (const match of matchesData) {
+                // 완료된 경기만 통계에 포함 (예정 경기 제외)
+                const completedMatches = matchesData.filter(m => m.ourScore != null && m.opponentScore != null);
+
+                for (const match of completedMatches) {
                     try {
                         const stats = await getMatchStats(match.id);
                         stats.forEach(stat => {
@@ -67,10 +69,9 @@ function PlayerStats() {
                     }
                 }
 
-                // 공헌점 계산 (득점×2 + 어시스트×1)
                 const statsArray = Object.values(allStats).map(s => ({
                     ...s,
-                    contribution: s.goals * 2 + s.assists,
+                    attackPoints: s.goals * 2 + s.assists,
                 }));
 
                 setPlayerStats(statsArray);
@@ -83,7 +84,7 @@ function PlayerStats() {
         fetchData();
     }, []);
 
-    // 포지션 배지 CSS 클래스
+    // 포지션 배지
     function getPositionClass(position) {
         const pos = (position || '').toUpperCase();
         if (pos.includes('GK') || pos === '골키퍼') return 'badge-gk';
@@ -102,6 +103,29 @@ function PlayerStats() {
         return pos || '-';
     }
 
+    // 포지션 필터 탭 색상
+    function getFilterTabClass(tabKey) {
+        if (filter !== tabKey) return 'filter-tab';
+        if (tabKey === 'all') return 'filter-tab active';
+        return `filter-tab active filter-tab-${tabKey}`;
+    }
+
+    // 정렬 핸들러: 같은 열 클릭 시 방향 토글, 다른 열 클릭 시 내림차순부터
+    function handleSort(column) {
+        if (sortBy === column) {
+            setSortDir(prev => prev === 'desc' ? 'asc' : 'desc');
+        } else {
+            setSortBy(column);
+            setSortDir('desc');
+        }
+    }
+
+    // 정렬 화살표 표시
+    function getSortArrow(column) {
+        if (sortBy !== column) return '';
+        return sortDir === 'desc' ? ' ▼' : ' ▲';
+    }
+
     // 필터 + 검색 + 정렬
     const filteredStats = playerStats
         .filter(p => {
@@ -111,7 +135,26 @@ function PlayerStats() {
         .filter(p =>
             p.name.toLowerCase().includes(searchTerm.toLowerCase())
         )
-        .sort((a, b) => b[sortBy] - a[sortBy]);
+        .sort((a, b) => {
+            const diff = a[sortBy] - b[sortBy];
+            return sortDir === 'desc' ? -diff : diff;
+        });
+
+    // 공동순위 계산: 같은 정렬 값이면 같은 순위
+    function getRanks(stats) {
+        const ranks = [];
+        let currentRank = 1;
+        for (let i = 0; i < stats.length; i++) {
+            if (i > 0 && stats[i][sortBy] === stats[i - 1][sortBy]) {
+                ranks.push(ranks[i - 1]); // 공동순위
+            } else {
+                ranks.push(currentRank);
+            }
+            currentRank = i + 2; // 다음 순위는 실제 위치 기준
+        }
+        return ranks;
+    }
+    const ranks = getRanks(filteredStats);
 
     // 요약 통계
     const totalGoals = playerStats.reduce((sum, p) => sum + p.goals, 0);
@@ -145,7 +188,7 @@ function PlayerStats() {
                 ].map(tab => (
                     <button
                         key={tab.key}
-                        className={`filter-tab ${filter === tab.key ? 'active' : ''}`}
+                        className={getFilterTabClass(tab.key)}
                         onClick={() => setFilter(tab.key)}
                     >
                         {tab.label}
@@ -155,36 +198,31 @@ function PlayerStats() {
 
             {/* 선수 스탯 테이블 */}
             <div className="card" style={{ padding: 0, overflow: 'auto' }}>
-                <table className="data-table">
+                <table className="data-table stats-table">
                     <thead>
                         <tr>
-                            <th>#</th>
-                            <th>선수</th>
-                            <th>포지션</th>
-                            <th className="text-center"
-                                style={{ cursor: 'pointer' }}
-                                onClick={() => setSortBy('matches')}>
-                                경기 {sortBy === 'matches' ? '▼' : ''}
+                            <th className="col-number">순위</th>
+                            <th className="col-name">선수</th>
+                            <th className="col-position">포지션</th>
+                            <th className="col-stat text-center sortable"
+                                onClick={() => handleSort('matches')}>
+                                경기{getSortArrow('matches')}
                             </th>
-                            <th className="text-center"
-                                style={{ cursor: 'pointer' }}
-                                onClick={() => setSortBy('quarters')}>
-                                쿼터 {sortBy === 'quarters' ? '▼' : ''}
+                            <th className="col-stat text-center sortable"
+                                onClick={() => handleSort('quarters')}>
+                                쿼터{getSortArrow('quarters')}
                             </th>
-                            <th className="text-center"
-                                style={{ cursor: 'pointer' }}
-                                onClick={() => setSortBy('goals')}>
-                                득점 {sortBy === 'goals' ? '▼' : ''}
+                            <th className="col-stat text-center sortable"
+                                onClick={() => handleSort('goals')}>
+                                득점{getSortArrow('goals')}
                             </th>
-                            <th className="text-center"
-                                style={{ cursor: 'pointer' }}
-                                onClick={() => setSortBy('assists')}>
-                                어시스트 {sortBy === 'assists' ? '▼' : ''}
+                            <th className="col-stat text-center sortable"
+                                onClick={() => handleSort('assists')}>
+                                어시스트{getSortArrow('assists')}
                             </th>
-                            <th className="text-center"
-                                style={{ cursor: 'pointer' }}
-                                onClick={() => setSortBy('contribution')}>
-                                공헌점 {sortBy === 'contribution' ? '▼' : ''}
+                            <th className="col-stat text-center sortable"
+                                onClick={() => handleSort('attackPoints')}>
+                                공격포인트{getSortArrow('attackPoints')}
                             </th>
                         </tr>
                     </thead>
@@ -198,21 +236,21 @@ function PlayerStats() {
                         ) : (
                             filteredStats.map((player, index) => (
                                 <tr key={player.id}>
-                                    <td style={{ color: 'var(--color-text-muted)', fontWeight: 500 }}>
-                                        {player.backNumber}
+                                    <td className="col-number" style={{ color: 'var(--color-text-muted)', fontWeight: 500 }}>
+                                        {ranks[index]}
                                     </td>
-                                    <td style={{ fontWeight: 600 }}>{player.name}</td>
-                                    <td>
+                                    <td className="col-name" style={{ fontWeight: 600 }}>{player.name}</td>
+                                    <td className="col-position">
                                         <span className={`badge ${getPositionClass(player.position)}`}>
                                             {getPositionLabel(player.position)}
                                         </span>
                                     </td>
-                                    <td className="text-center">{player.matches}</td>
-                                    <td className="text-center">{player.quarters}</td>
-                                    <td className="text-center" style={{ fontWeight: 600 }}>{player.goals}</td>
-                                    <td className="text-center">{player.assists}</td>
-                                    <td className="text-center" style={{ fontWeight: 600, color: 'var(--color-gold)' }}>
-                                        {player.contribution}
+                                    <td className="col-stat text-center">{player.matches}</td>
+                                    <td className="col-stat text-center">{player.quarters}</td>
+                                    <td className="col-stat text-center" style={{ fontWeight: 600 }}>{player.goals}</td>
+                                    <td className="col-stat text-center">{player.assists}</td>
+                                    <td className="col-stat text-center" style={{ fontWeight: 600, color: 'var(--color-gold)' }}>
+                                        {player.attackPoints}
                                     </td>
                                 </tr>
                             ))
