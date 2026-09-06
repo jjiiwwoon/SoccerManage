@@ -1,18 +1,13 @@
 /**
  * ====================================
- * 파일: MatchStatService.java
- * 위치: service 패키지 안에 넣기
- * 분야: 백엔드 / 비즈니스 로직
+ * 파일: MatchStatService.java (수정됨)
+ * 위치: service 패키지 (기존 파일 덮어쓰기)
  * 기능: 개인 스탯 관련 비즈니스 로직
  * ====================================
  *
- * 이 서비스는 "경기"와 "선수"를 연결하는 역할을 해.
- *
- * 예를 들어:
- *   "3월 15일 경기에 정지원 선수의 골 2, 어시스트 1 기록"
- *   → matchId=1, memberId=3, goals=2, assists=1
- *
- * 추가로 선수별 통산 기록(총 골, 총 어시스트)도 계산해줘.
+ * 변경사항:
+ * - updateStat()에 quarters 필드 업데이트 추가
+ * - 일괄 스탯 입력을 위해 기존 스탯 삭제 후 재입력 지원
  */
 package com.teammanage.teammanage.service;
 
@@ -45,7 +40,7 @@ public class MatchStatService {
         return matchStatRepository.findByMemberId(memberId);
     }
 
-    // 스탯 추가 (경기 ID + 선수 ID + 골 + 어시스트)
+    // 스탯 추가
     public MatchStat createStat(Long matchId, Long memberId, MatchStat statData) {
         Match match = matchRepository.findById(matchId)
                 .orElseThrow(() -> new RuntimeException("경기를 찾을 수 없습니다."));
@@ -57,18 +52,25 @@ public class MatchStatService {
         return matchStatRepository.save(statData);
     }
 
-    // 스탯 수정
+    // 스탯 수정 (quarters 필드 추가)
     public MatchStat updateStat(Long statId, MatchStat statData) {
         MatchStat stat = matchStatRepository.findById(statId)
                 .orElseThrow(() -> new RuntimeException("스탯을 찾을 수 없습니다."));
 
         stat.setGoals(statData.getGoals());
         stat.setAssists(statData.getAssists());
+        stat.setQuarters(statData.getQuarters());   // quarters 업데이트 추가
         return matchStatRepository.save(stat);
     }
 
     // 스탯 삭제
     public void deleteStat(Long statId) {
         matchStatRepository.deleteById(statId);
+    }
+
+    // 특정 경기의 모든 스탯 삭제 (결과 재입력용)
+    public void deleteStatsByMatch(Long matchId) {
+        List<MatchStat> stats = matchStatRepository.findByMatchId(matchId);
+        matchStatRepository.deleteAll(stats);
     }
 }

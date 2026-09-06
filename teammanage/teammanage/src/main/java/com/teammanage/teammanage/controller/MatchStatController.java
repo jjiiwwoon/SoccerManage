@@ -1,22 +1,13 @@
 /**
  * ====================================
- * 파일: MatchStatController.java
- * 위치: controller 패키지 안에 넣기
- * 분야: 백엔드 / API 엔드포인트
+ * 파일: MatchStatController.java (수정됨)
+ * 위치: controller 패키지 (기존 파일 덮어쓰기)
  * 기능: 개인 스탯 REST API
  * ====================================
  *
- * 이 API는 "경기 기록" 안에 "선수별 스탯"을 넣는 거야.
- *
- * URL 구조가 좀 다른데:
- *   /api/matches/{matchId}/stats → 특정 경기의 스탯들
- *
- * 이걸 "중첩 리소스(Nested Resource)"라고 해.
- * 경기(match) 안에 스탯(stat)이 들어있으니까
- * URL도 그 관계를 표현하는 거야.
- *
- * 추가로 선수별 스탯 조회도 있어:
- *   /api/members/{memberId}/stats → 특정 선수의 모든 스탯
+ * 변경사항:
+ * - DELETE /api/matches/{matchId}/stats/all 추가 (경기별 스탯 전체 삭제)
+ *   → 결과 재입력 시 기존 스탯을 모두 지우고 다시 입력할 때 사용
  */
 package com.teammanage.teammanage.controller;
 
@@ -34,19 +25,19 @@ public class MatchStatController {
 
     private final MatchStatService matchStatService;
 
-    // GET /api/matches/{matchId}/stats — 특정 경기의 모든 스탯
+    // GET /api/matches/{matchId}/stats
     @GetMapping("/api/matches/{matchId}/stats")
     public List<MatchStat> getStatsByMatch(@PathVariable Long matchId) {
         return matchStatService.getStatsByMatch(matchId);
     }
 
-    // GET /api/members/{memberId}/stats — 특정 선수의 모든 스탯
+    // GET /api/members/{memberId}/stats
     @GetMapping("/api/members/{memberId}/stats")
     public List<MatchStat> getStatsByMember(@PathVariable Long memberId) {
         return matchStatService.getStatsByMember(memberId);
     }
 
-    // POST /api/matches/{matchId}/stats?memberId={memberId} — 스탯 추가
+    // POST /api/matches/{matchId}/stats?memberId={memberId}
     @PostMapping("/api/matches/{matchId}/stats")
     public MatchStat createStat(
             @PathVariable Long matchId,
@@ -55,16 +46,23 @@ public class MatchStatController {
         return matchStatService.createStat(matchId, memberId, stat);
     }
 
-    // PUT /api/stats/{statId} — 스탯 수정
+    // PUT /api/stats/{statId}
     @PutMapping("/api/stats/{statId}")
     public MatchStat updateStat(@PathVariable Long statId, @RequestBody MatchStat stat) {
         return matchStatService.updateStat(statId, stat);
     }
 
-    // DELETE /api/stats/{statId} — 스탯 삭제
+    // DELETE /api/stats/{statId}
     @DeleteMapping("/api/stats/{statId}")
     public ResponseEntity<Void> deleteStat(@PathVariable Long statId) {
         matchStatService.deleteStat(statId);
+        return ResponseEntity.ok().build();
+    }
+
+    // DELETE /api/matches/{matchId}/stats/all — 경기별 스탯 전체 삭제 (결과 재입력용)
+    @DeleteMapping("/api/matches/{matchId}/stats/all")
+    public ResponseEntity<Void> deleteAllStatsByMatch(@PathVariable Long matchId) {
+        matchStatService.deleteStatsByMatch(matchId);
         return ResponseEntity.ok().build();
     }
 }

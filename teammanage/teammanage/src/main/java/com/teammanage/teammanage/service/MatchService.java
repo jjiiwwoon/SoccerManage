@@ -1,16 +1,14 @@
 /**
  * ====================================
- * 파일: MatchService.java
- * 위치: service 패키지 안에 넣기
- * 분야: 백엔드 / 비즈니스 로직
+ * 파일: MatchService.java (수정됨)
+ * 위치: service 패키지 (기존 파일 덮어쓰기)
  * 기능: 경기 기록 관련 비즈니스 로직
  * ====================================
  *
- * MemberService 만들었던 것과 같은 패턴이야.
- * Controller에서 직접 Repository를 쓰지 않고,
- * Service를 거쳐서 쓰는 이유는 "역할 분리" 때문이야.
- *
- * 추가된 로직: 스코어를 입력하면 자동으로 결과(승/무/패)를 계산해줘!
+ * 변경사항:
+ * - updateMatch()에 matchTime, memo 필드 추가
+ * - 스코어가 null이면 result도 null로 유지 (예정 경기)
+ * - 스코어가 입력되면 result 자동 계산 (결과 입력)
  */
 package com.teammanage.teammanage.service;
 
@@ -39,16 +37,16 @@ public class MatchService {
                 .orElseThrow(() -> new RuntimeException("경기를 찾을 수 없습니다. id: " + id));
     }
 
-    // 경기 추가 (스코어에 따라 결과 자동 계산)
+    // 경기 추가 (일정 등록 시 스코어 없이 저장 가능)
     public Match createMatch(Match match) {
-        // 스코어가 입력되었으면 결과를 자동 계산
         if (match.getOurScore() != null && match.getOpponentScore() != null) {
             match.setResult(calculateResult(match.getOurScore(), match.getOpponentScore()));
         }
+        // 스코어가 없으면 result는 null → 프론트에서 "예정"으로 표시
         return matchRepository.save(match);
     }
 
-    // 경기 수정
+    // 경기 수정 (결과 입력 포함)
     public Match updateMatch(Long id, Match matchData) {
         Match match = getMatchById(id);
         match.setMatchDate(matchData.getMatchDate());
@@ -56,10 +54,14 @@ public class MatchService {
         match.setOurScore(matchData.getOurScore());
         match.setOpponentScore(matchData.getOpponentScore());
         match.setLocation(matchData.getLocation());
+        match.setMatchTime(matchData.getMatchTime());   // 새로 추가
+        match.setMemo(matchData.getMemo());               // 새로 추가
 
-        // 스코어가 있으면 결과 자동 계산
+        // 스코어가 있으면 결과 자동 계산, 없으면 null (예정)
         if (match.getOurScore() != null && match.getOpponentScore() != null) {
             match.setResult(calculateResult(match.getOurScore(), match.getOpponentScore()));
+        } else {
+            match.setResult(null);
         }
         return matchRepository.save(match);
     }
@@ -71,9 +73,6 @@ public class MatchService {
 
     /**
      * 스코어로 승/무/패 자동 계산
-     * 우리 점수 > 상대 점수 → WIN (승리)
-     * 우리 점수 = 상대 점수 → DRAW (무승부)
-     * 우리 점수 < 상대 점수 → LOSE (패배)
      */
     private MatchResult calculateResult(int ourScore, int opponentScore) {
         if (ourScore > opponentScore) return MatchResult.WIN;
