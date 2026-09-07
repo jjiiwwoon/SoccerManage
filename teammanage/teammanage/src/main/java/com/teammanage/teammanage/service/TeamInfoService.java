@@ -1,11 +1,13 @@
 /**
  * ====================================
- * 파일: TeamInfoService.java (신규)
+ * 파일: TeamInfoService.java (수정됨)
  * 위치: service 패키지
  * 기능: 팀 정보 비즈니스 로직
  * ====================================
  *
- * 단일 row 관리 — 없으면 기본값으로 생성, 있으면 업데이트
+ * 변경사항:
+ * - linksJson 필드 업데이트 추가
+ * - 기존 link1~3 마이그레이션 지원
  */
 package com.teammanage.teammanage.service;
 
@@ -29,9 +31,46 @@ public class TeamInfoService {
             TeamInfo defaultInfo = new TeamInfo();
             defaultInfo.setTeamName("창우FC");
             defaultInfo.setDescription("축구동호회 팀 관리 시스템");
+            defaultInfo.setLinksJson("[]");
             return teamInfoRepository.save(defaultInfo);
         }
-        return all.get(0);
+        TeamInfo info = all.get(0);
+
+        // 기존 link1~3 → linksJson 마이그레이션 (최초 1회)
+        if ((info.getLinksJson() == null || info.getLinksJson().isEmpty()) && hasOldLinks(info)) {
+            StringBuilder sb = new StringBuilder("[");
+            boolean first = true;
+            if (info.getLink1() != null && !info.getLink1().isEmpty()) {
+                sb.append(buildLinkJson(info.getLink1Label(), info.getLink1()));
+                first = false;
+            }
+            if (info.getLink2() != null && !info.getLink2().isEmpty()) {
+                if (!first) sb.append(",");
+                sb.append(buildLinkJson(info.getLink2Label(), info.getLink2()));
+                first = false;
+            }
+            if (info.getLink3() != null && !info.getLink3().isEmpty()) {
+                if (!first) sb.append(",");
+                sb.append(buildLinkJson(info.getLink3Label(), info.getLink3()));
+            }
+            sb.append("]");
+            info.setLinksJson(sb.toString());
+            teamInfoRepository.save(info);
+        }
+
+        return info;
+    }
+
+    private boolean hasOldLinks(TeamInfo info) {
+        return (info.getLink1() != null && !info.getLink1().isEmpty())
+                || (info.getLink2() != null && !info.getLink2().isEmpty())
+                || (info.getLink3() != null && !info.getLink3().isEmpty());
+    }
+
+    private String buildLinkJson(String label, String url) {
+        String safeLabel = (label != null ? label : "").replace("\"", "\\\"");
+        String safeUrl = (url != null ? url : "").replace("\"", "\\\"");
+        return "{\"label\":\"" + safeLabel + "\",\"url\":\"" + safeUrl + "\"}";
     }
 
     // 팀 정보 업데이트
@@ -39,12 +78,14 @@ public class TeamInfoService {
         TeamInfo info = getTeamInfo();
         info.setTeamName(data.getTeamName());
         info.setDescription(data.getDescription());
-        info.setLink1(data.getLink1());
-        info.setLink1Label(data.getLink1Label());
-        info.setLink2(data.getLink2());
-        info.setLink2Label(data.getLink2Label());
-        info.setLink3(data.getLink3());
-        info.setLink3Label(data.getLink3Label());
+        info.setLinksJson(data.getLinksJson());
+        // 기존 link1~3 필드는 더 이상 사용하지 않으므로 비움
+        info.setLink1(null);
+        info.setLink1Label(null);
+        info.setLink2(null);
+        info.setLink2Label(null);
+        info.setLink3(null);
+        info.setLink3Label(null);
         return teamInfoRepository.save(info);
     }
 

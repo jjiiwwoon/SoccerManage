@@ -126,13 +126,15 @@ function Gallery() {
                         className="btn btn-gold"
                         onClick={() => setShowUploadModal(true)}
                     >
-                        📷 사진 올리기
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginRight:'4px',verticalAlign:'middle'}}><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                        사진 올리기
                     </button>
                     <button
                         className="btn btn-dark"
                         onClick={() => setShowVideoModal(true)}
                     >
-                        🎬 동영상 추가
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginRight:'4px',verticalAlign:'middle'}}><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                        동영상 추가
                     </button>
                 </div>
             </div>
@@ -158,7 +160,9 @@ function Gallery() {
                 <div className="loading">로딩 중...</div>
             ) : items.length === 0 ? (
                 <div className="card" style={{ textAlign: 'center', padding: '60px 20px' }}>
-                    <div style={{ fontSize: '3rem', marginBottom: '16px' }}>📸</div>
+                    <div style={{ marginBottom: '16px', color: 'var(--color-text-muted)' }}>
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                    </div>
                     <p style={{ color: 'var(--color-text-muted)', fontSize: '1rem' }}>
                         아직 등록된 {filter === 'ALL' ? '사진/동영상이' : filter === 'PHOTO' ? '사진이' : '동영상이'} 없습니다.
                     </p>
@@ -190,7 +194,7 @@ function Gallery() {
                                         />
                                     ) : (
                                         <div className="gallery-thumb gallery-video-placeholder">
-                                            🎬
+                                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
                                         </div>
                                     )}
                                     <div className="gallery-play-icon">▶</div>

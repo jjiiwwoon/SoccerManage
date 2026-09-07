@@ -1,14 +1,9 @@
 /**
  * ====================================
- * 파일: Schedule.js (수정됨)
- * 위치: frontend/src/pages/Schedule.js (기존 파일 덮어쓰기)
- * 기능: 일정 페이지 - 캘린더 + 일정 등록 + 결과 입력
+ * 파일: Schedule.js (디자인 캔버스 리뉴얼)
+ * 위치: frontend/src/pages/Schedule.js
+ * 기능: 일정 페이지 - 캘린더(도트) + 사이드바(경기카드/월간일정) + 일정 등록 + 결과 입력
  * ====================================
- *
- * 변경사항:
- * 1. 일정 등록 기능: 날짜, 시간, 장소, 상대팀을 입력해서 예정 경기 등록
- * 2. 결과 입력 기능: 예정 경기 클릭 → 스코어 + 개인 기록 일괄 입력
- * 3. 경기 삭제 기능: 등록된 경기 삭제 가능
  */
 import React, { useState, useEffect } from 'react';
 import {
@@ -16,6 +11,432 @@ import {
     getMatchStats, createMatchStat, deleteAllMatchStats
 } from '../api/matchApi';
 import { getMembers } from '../api/memberApi';
+
+/* ========== 스타일 ========== */
+const scStyles = `
+/* ===== Layout ===== */
+.sc-layout {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 20px;
+    align-items: start;
+}
+
+/* ===== Calendar Card ===== */
+.sc-cal-card {
+    background: var(--color-surface, #fff);
+    border-radius: 12px;
+    border: 1px solid var(--color-border, #e5e7eb);
+    padding: 20px;
+}
+
+.sc-cal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+
+.sc-cal-nav-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.sc-cal-nav-btn {
+    background: none;
+    border: 1px solid var(--color-border, #e5e7eb);
+    border-radius: 6px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--color-text, #1a1a2e);
+    transition: background 0.15s;
+}
+.sc-cal-nav-btn:hover {
+    background: var(--color-light, #f3f4f6);
+}
+
+.sc-cal-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--color-text, #1a1a2e);
+    min-width: 120px;
+    text-align: center;
+}
+
+.sc-today-btn {
+    background: none;
+    border: 1px solid var(--color-gold, #b08d2a);
+    color: var(--color-gold, #b08d2a);
+    border-radius: 6px;
+    padding: 4px 14px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.sc-today-btn:hover {
+    background: var(--color-gold, #b08d2a);
+    color: #fff;
+}
+
+/* Calendar Grid */
+.sc-cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 0;
+}
+
+.sc-cal-dow {
+    text-align: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 8px 0;
+    color: #8b95a5;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.sc-cal-cell {
+    aspect-ratio: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: background 0.15s;
+    position: relative;
+}
+.sc-cal-cell:hover {
+    background: var(--color-light, #f3f4f6);
+}
+.sc-cal-cell.sc-cal-other {
+    opacity: 0.3;
+    pointer-events: none;
+}
+.sc-cal-cell.sc-cal-today {
+    border: 2px solid var(--color-gold, #b08d2a);
+    background: rgba(176, 141, 42, 0.06);
+}
+.sc-cal-cell.sc-cal-selected {
+    background: rgba(176, 141, 42, 0.12);
+}
+
+.sc-cal-day {
+    font-size: 0.85rem;
+    font-weight: 500;
+    line-height: 1;
+}
+
+.sc-cal-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+/* Legend */
+.sc-cal-legend {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--color-border, #e5e7eb);
+}
+.sc-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.72rem;
+    color: #8b95a5;
+}
+.sc-legend-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+}
+
+/* ===== Sidebar ===== */
+.sc-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* Match Card */
+.sc-match-card {
+    background: var(--color-surface, #fff);
+    border-radius: 12px;
+    border: 1px solid var(--color-border, #e5e7eb);
+    overflow: hidden;
+}
+
+.sc-match-topline {
+    height: 3px;
+    width: 100%;
+}
+
+.sc-match-body {
+    padding: 16px 18px;
+}
+
+.sc-match-date {
+    font-size: 0.8rem;
+    color: #8b95a5;
+    margin-bottom: 14px;
+}
+
+.sc-match-status-text {
+    font-size: 0.82rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.sc-match-teams {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.sc-team {
+    text-align: center;
+    flex: 1;
+    min-width: 0;
+}
+
+.sc-team-name {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--color-text, #1a1a2e);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sc-team-label {
+    font-size: 0.65rem;
+    color: #8b95a5;
+    font-weight: 600;
+    letter-spacing: 1px;
+    margin-top: 2px;
+}
+
+/* Score area */
+.sc-match-score {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    padding: 0 4px;
+}
+
+.sc-score-text {
+    font-family: 'Oswald', sans-serif;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--color-text, #1a1a2e);
+    letter-spacing: 2px;
+}
+
+.sc-match-vs {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #8b95a5;
+    letter-spacing: 2px;
+}
+
+.sc-result-pill {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 2px 10px;
+    border-radius: 10px;
+    letter-spacing: 0.5px;
+}
+.sc-result-win {
+    background: rgba(34, 197, 94, 0.12);
+    color: #16a34a;
+}
+.sc-result-draw {
+    background: rgba(245, 158, 11, 0.12);
+    color: #d97706;
+}
+.sc-result-lose {
+    background: rgba(239, 68, 68, 0.12);
+    color: #dc2626;
+}
+
+/* Tags */
+.sc-match-tags {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+}
+.sc-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.75rem;
+    color: #8b95a5;
+    background: var(--color-light, #f3f4f6);
+    padding: 3px 10px;
+    border-radius: 6px;
+}
+
+/* Match actions */
+.sc-match-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--color-border, #e5e7eb);
+}
+.sc-match-actions button {
+    flex: 1;
+    padding: 7px 0;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    border: 1px solid var(--color-border, #e5e7eb);
+    background: none;
+    color: var(--color-text, #1a1a2e);
+}
+.sc-match-actions button:hover {
+    background: var(--color-light, #f3f4f6);
+}
+.sc-match-actions .sc-btn-primary {
+    background: var(--color-gold, #b08d2a);
+    color: #fff;
+    border-color: var(--color-gold, #b08d2a);
+}
+.sc-match-actions .sc-btn-primary:hover {
+    opacity: 0.9;
+}
+.sc-match-actions .sc-btn-danger {
+    color: #dc2626;
+    border-color: rgba(239, 68, 68, 0.3);
+}
+.sc-match-actions .sc-btn-danger:hover {
+    background: rgba(239, 68, 68, 0.06);
+}
+
+/* Empty sidebar card */
+.sc-empty-card {
+    background: var(--color-surface, #fff);
+    border-radius: 12px;
+    border: 1px solid var(--color-border, #e5e7eb);
+    padding: 28px 18px;
+    text-align: center;
+    color: #8b95a5;
+    font-size: 0.85rem;
+}
+.sc-empty-card .sc-empty-register {
+    margin-top: 12px;
+    background: var(--color-gold, #b08d2a);
+    color: #fff;
+    border: none;
+    padding: 7px 18px;
+    border-radius: 6px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+/* ===== Monthly Schedule Card ===== */
+.sc-monthly-card {
+    background: var(--color-surface, #fff);
+    border-radius: 12px;
+    border: 1px solid var(--color-border, #e5e7eb);
+    overflow: hidden;
+}
+
+.sc-monthly-title {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--color-text, #1a1a2e);
+    padding: 14px 18px 10px;
+}
+
+.sc-monthly-list {
+    max-height: 320px;
+    overflow-y: auto;
+}
+
+.sc-monthly-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 18px;
+    cursor: pointer;
+    transition: background 0.12s;
+    border-bottom: 1px solid var(--color-border, #e5e7eb);
+}
+.sc-monthly-item:last-child {
+    border-bottom: none;
+}
+.sc-monthly-item:hover {
+    background: var(--color-light, #f3f4f6);
+}
+
+.sc-monthly-bar {
+    width: 3px;
+    height: 32px;
+    border-radius: 2px;
+    flex-shrink: 0;
+}
+
+.sc-monthly-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.sc-monthly-opponent {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--color-text, #1a1a2e);
+}
+
+.sc-monthly-sub {
+    font-size: 0.75rem;
+    color: #8b95a5;
+    margin-top: 1px;
+}
+
+.sc-monthly-badge {
+    font-size: 0.68rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 8px;
+    flex-shrink: 0;
+}
+
+.sc-monthly-empty {
+    padding: 20px 18px;
+    text-align: center;
+    color: #8b95a5;
+    font-size: 0.82rem;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 800px) {
+    .sc-layout {
+        grid-template-columns: 1fr;
+    }
+}
+`;
 
 function Schedule() {
     const [matches, setMatches] = useState([]);
@@ -91,6 +512,13 @@ function Schedule() {
         setSelectedMatch(null);
     }
 
+    function goToToday() {
+        const today = new Date();
+        setCurrentDate(new Date(today.getFullYear(), today.getMonth(), 1));
+        setSelectedDate(today.getDate());
+        handleDateClick(today.getDate());
+    }
+
     function getMatchForDate(day) {
         const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         return matches.find(m => m.matchDate === dateStr);
@@ -104,10 +532,54 @@ function Schedule() {
     }
 
     function getResultLabel(result) {
+        if (result === 'win') return '승';
+        if (result === 'draw') return '무';
+        if (result === 'lose') return '패';
+        return '예정';
+    }
+
+    function getResultLabelFull(result) {
         if (result === 'win') return '승리';
         if (result === 'draw') return '무승부';
         if (result === 'lose') return '패배';
         return '예정';
+    }
+
+    // 색상 헬퍼
+    function getDayColor(dayOfWeek) {
+        if (dayOfWeek === 0) return '#dc2626'; // Sunday
+        if (dayOfWeek === 6) return '#2563eb'; // Saturday
+        return '#8b95a5'; // Weekday
+    }
+
+    function getDotColor(match) {
+        if (match.ourScore == null || match.opponentScore == null) return '#b08d2a'; // upcoming = gold
+        if (match.ourScore > match.opponentScore) return '#16a34a'; // win
+        if (match.ourScore === match.opponentScore) return '#d97706'; // draw
+        return '#dc2626'; // lose
+    }
+
+    function getResultColor(result) {
+        if (result === 'win') return '#16a34a';
+        if (result === 'draw') return '#d97706';
+        if (result === 'lose') return '#dc2626';
+        return '#b08d2a';
+    }
+
+    function getResultGradient(result) {
+        const color = getResultColor(result);
+        return `linear-gradient(90deg, ${color}, ${color}88)`;
+    }
+
+    // 날짜 포맷 헬퍼
+    function formatMatchDate(dateStr) {
+        if (!dateStr) return '';
+        const parts = dateStr.split('-');
+        const m = parseInt(parts[1]);
+        const d = parseInt(parts[2]);
+        const date = new Date(parseInt(parts[0]), m - 1, d);
+        const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+        return `${m}월 ${d}일 (${dayNames[date.getDay()]})`;
     }
 
     // 날짜 클릭
@@ -126,6 +598,58 @@ function Schedule() {
         } else {
             setMatchStats([]);
         }
+    }
+
+    // 사이드바에서 경기 선택
+    async function selectMatchFromList(match) {
+        // 해당 경기의 날짜로 이동
+        const parts = match.matchDate.split('-');
+        const matchYear = parseInt(parts[0]);
+        const matchMonth = parseInt(parts[1]) - 1;
+        const matchDay = parseInt(parts[2]);
+
+        if (matchYear !== year || matchMonth !== month) {
+            setCurrentDate(new Date(matchYear, matchMonth, 1));
+        }
+        setSelectedDate(matchDay);
+        setSelectedMatch(match);
+
+        try {
+            const stats = await getMatchStats(match.id);
+            setMatchStats(stats);
+        } catch (err) {
+            setMatchStats([]);
+        }
+    }
+
+    // 이번 달 경기 목록
+    function getMonthMatches() {
+        const monthStr = `${year}-${String(month + 1).padStart(2, '0')}`;
+        return matches
+            .filter(m => m.matchDate && m.matchDate.startsWith(monthStr))
+            .sort((a, b) => a.matchDate.localeCompare(b.matchDate));
+    }
+
+    // 사이드바에 보여줄 대표 경기 결정
+    function getFeaturedMatch() {
+        if (selectedMatch) return selectedMatch;
+
+        // 선택된 날짜에 경기가 없으면, 가장 가까운 예정 경기 또는 최근 완료 경기
+        const today = new Date();
+        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+        const upcoming = matches
+            .filter(m => m.matchDate >= todayStr && (m.ourScore == null || m.opponentScore == null))
+            .sort((a, b) => a.matchDate.localeCompare(b.matchDate));
+
+        if (upcoming.length > 0) return upcoming[0];
+
+        const completed = matches
+            .filter(m => m.ourScore != null && m.opponentScore != null)
+            .sort((a, b) => b.matchDate.localeCompare(a.matchDate));
+
+        if (completed.length > 0) return completed[0];
+        return null;
     }
 
     // 날짜 select 동기화 함수
@@ -149,7 +673,7 @@ function Schedule() {
     }
 
     // 해당 월의 일수 계산
-    function getDaysInMonth(y, m) {
+    function getDaysInMonthForSelect(y, m) {
         if (!y || !m) return 31;
         return new Date(parseInt(y), parseInt(m), 0).getDate();
     }
@@ -316,7 +840,7 @@ function Schedule() {
         return `badge-${label.toLowerCase()}`;
     }
 
-    // 캘린더 셀 렌더링
+    // ========== 캘린더 셀 렌더링 ==========
     function renderCalendarCells() {
         const cells = [];
         const today = new Date();
@@ -324,67 +848,49 @@ function Schedule() {
         const todayMonth = today.getMonth();
         const todayYear = today.getFullYear();
 
+        // 이전 달 빈칸
         for (let i = firstDay - 1; i >= 0; i--) {
+            const prevDay = daysInPrevMonth - i;
+            const prevDow = (firstDay - 1 - i) % 7; // not needed, just use index
             cells.push(
-                <div key={`prev-${i}`} className="calendar-cell other-month">
-                    {daysInPrevMonth - i}
+                <div key={`prev-${i}`} className="sc-cal-cell sc-cal-other">
+                    <span className="sc-cal-day" style={{ color: '#ccc' }}>{prevDay}</span>
                 </div>
             );
         }
 
+        // 현재 달
         for (let day = 1; day <= daysInMonth; day++) {
             const match = getMatchForDate(day);
             const isToday = day === todayDay && month === todayMonth && year === todayYear;
             const isSelected = day === selectedDate;
-            const result = match ? getResult(match) : null;
+            const dayOfWeek = new Date(year, month, day).getDay();
 
-            let className = 'calendar-cell';
-            if (isToday) className += ' today';
-            if (isSelected) className += ' selected';
-            if (match) {
-                className += ' has-match';
-                if (result === 'upcoming') className += ' upcoming';
-            }
-
-            // 결과 약자 + 색상
-            function getResultShort(r) {
-                if (r === 'win') return { label: 'W', className: 'result-w' };
-                if (r === 'draw') return { label: 'D', className: 'result-d' };
-                if (r === 'lose') return { label: 'L', className: 'result-l' };
-                return null;
-            }
+            let cellClass = 'sc-cal-cell';
+            if (isToday) cellClass += ' sc-cal-today';
+            if (isSelected) cellClass += ' sc-cal-selected';
 
             cells.push(
                 <div
                     key={day}
-                    className={className}
+                    className={cellClass}
                     onClick={() => handleDateClick(day)}
                 >
-                    <span className="calendar-day-number">{day}</span>
-                    {match && result === 'upcoming' && (
-                        <span className="calendar-match-info upcoming-label">
-                            <span className="match-day-text">Match Day</span>
-                            <span className="match-opponent-sub">vs {match.opponent}</span>
-                        </span>
-                    )}
-                    {match && result !== 'upcoming' && (
-                        <span className="calendar-match-info">
-                            <span className="match-opponent-text">vs {match.opponent}</span>
-                            <span className={`result-short ${getResultShort(result)?.className}`}>
-                                {getResultShort(result)?.label}
-                            </span>
-                        </span>
+                    <span className="sc-cal-day" style={{ color: getDayColor(dayOfWeek) }}>{day}</span>
+                    {match && (
+                        <div className="sc-cal-dot" style={{ background: getDotColor(match) }}></div>
                     )}
                 </div>
             );
         }
 
+        // 다음 달 빈칸
         const totalCells = cells.length;
         const remaining = 42 - totalCells;
         for (let i = 1; i <= remaining; i++) {
             cells.push(
-                <div key={`next-${i}`} className="calendar-cell other-month">
-                    {i}
+                <div key={`next-${i}`} className="sc-cal-cell sc-cal-other">
+                    <span className="sc-cal-day" style={{ color: '#ccc' }}>{i}</span>
                 </div>
             );
         }
@@ -392,12 +898,158 @@ function Schedule() {
         return cells;
     }
 
+    // ========== 사이드바 경기 카드 렌더링 ==========
+    function renderMatchCard(match) {
+        if (!match) return null;
+        const result = getResult(match);
+        const isUpcoming = result === 'upcoming';
+
+        return (
+            <div className="sc-match-card">
+                <div
+                    className="sc-match-topline"
+                    style={{ background: getResultGradient(result) }}
+                ></div>
+                <div className="sc-match-body">
+                    {/* Date */}
+                    <div className="sc-match-date">{formatMatchDate(match.matchDate)}</div>
+
+                    {/* Status for upcoming */}
+                    {isUpcoming && (
+                        <div className="sc-match-status-text" style={{ color: '#b08d2a' }}>
+                            &middot; 예정
+                        </div>
+                    )}
+
+                    {/* Teams & Score */}
+                    <div className="sc-match-teams">
+                        <div className="sc-team">
+                            <div className="sc-team-name">창우FC</div>
+                            <div className="sc-team-label">HOME</div>
+                        </div>
+
+                        {isUpcoming ? (
+                            <div className="sc-match-score">
+                                <span className="sc-match-vs">VS</span>
+                            </div>
+                        ) : (
+                            <div className="sc-match-score">
+                                <div className="sc-score-text">
+                                    {match.ourScore} - {match.opponentScore}
+                                </div>
+                                <span className={`sc-result-pill sc-result-${result}`}>
+                                    {getResultLabel(result)}
+                                </span>
+                            </div>
+                        )}
+
+                        <div className="sc-team">
+                            <div className="sc-team-name">{match.opponent}</div>
+                            <div className="sc-team-label">AWAY</div>
+                        </div>
+                    </div>
+
+                    {/* Tags */}
+                    <div className="sc-match-tags">
+                        {match.location && (
+                            <span className="sc-tag">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                                    <circle cx="12" cy="10" r="3"/>
+                                </svg>
+                                {match.location}
+                            </span>
+                        )}
+                        {match.matchTime && (
+                            <span className="sc-tag">
+                                {match.matchTime}
+                                {match.matchEndTime && `~${match.matchEndTime}`}
+                            </span>
+                        )}
+                    </div>
+
+                    {/* Actions */}
+                    <div className="sc-match-actions">
+                        {isUpcoming ? (
+                            <button className="sc-btn-primary" onClick={openResultForm}>
+                                결과 입력
+                            </button>
+                        ) : (
+                            <button onClick={openResultForm}>
+                                결과 수정
+                            </button>
+                        )}
+                        <button className="sc-btn-danger" onClick={handleDeleteMatch}>
+                            삭제
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // ========== 이번 달 일정 리스트 ==========
+    function renderMonthlyList() {
+        const monthMatches = getMonthMatches();
+
+        return (
+            <div className="sc-monthly-card">
+                <div className="sc-monthly-title">이번 달 일정</div>
+                {monthMatches.length === 0 ? (
+                    <div className="sc-monthly-empty">이번 달 등록된 일정이 없습니다.</div>
+                ) : (
+                    <div className="sc-monthly-list">
+                        {monthMatches.map((match) => {
+                            const result = getResult(match);
+                            const isUpcoming = result === 'upcoming';
+                            const barColor = getResultColor(result);
+                            const parts = match.matchDate.split('-');
+                            const d = parseInt(parts[2]);
+                            const dateLabel = `${parseInt(parts[1])}/${d}`;
+
+                            let subText = dateLabel;
+                            if (!isUpcoming) {
+                                subText += ` · ${match.ourScore}-${match.opponentScore} ${getResultLabel(result)}`;
+                            } else if (match.matchTime) {
+                                subText += ` · ${match.matchTime}`;
+                            }
+
+                            const badgeStyle = isUpcoming
+                                ? { background: 'rgba(176, 141, 42, 0.12)', color: '#b08d2a' }
+                                : { background: `${barColor}18`, color: barColor };
+
+                            return (
+                                <div
+                                    key={match.id}
+                                    className="sc-monthly-item"
+                                    onClick={() => selectMatchFromList(match)}
+                                >
+                                    <div className="sc-monthly-bar" style={{ background: barColor }}></div>
+                                    <div className="sc-monthly-info">
+                                        <div className="sc-monthly-opponent">vs {match.opponent}</div>
+                                        <div className="sc-monthly-sub">{subText}</div>
+                                    </div>
+                                    <span className="sc-monthly-badge" style={badgeStyle}>
+                                        {isUpcoming ? '예정' : '완료'}
+                                    </span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
+        );
+    }
+
     const goalScorers = matchStats.filter(s => s.goals > 0);
+    const featuredMatch = getFeaturedMatch();
 
     if (loading) return <div className="loading">로딩 중...</div>;
 
     return (
         <div className="schedule-page">
+            <style>{scStyles}</style>
+
             <div className="page-header">
                 <h1 className="page-title">일정</h1>
                 <button className="btn btn-gold" onClick={openRegisterForm}>
@@ -405,147 +1057,78 @@ function Schedule() {
                 </button>
             </div>
 
-            <div className="schedule-layout">
-                {/* 캘린더 */}
-                <div className="card">
-                    <div className="calendar-header">
-                        <button className="calendar-nav" onClick={prevMonth}>◀</button>
-                        <span className="calendar-title">
-                            {year}년 {month + 1}월
-                        </span>
-                        <button className="calendar-nav" onClick={nextMonth}>▶</button>
+            <div className="sc-layout">
+                {/* ===== 캘린더 ===== */}
+                <div className="sc-cal-card">
+                    <div className="sc-cal-header">
+                        <div className="sc-cal-nav-group">
+                            <button className="sc-cal-nav-btn" onClick={prevMonth}>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="15 18 9 12 15 6"/>
+                                </svg>
+                            </button>
+                            <span className="sc-cal-title">{year}년 {month + 1}월</span>
+                            <button className="sc-cal-nav-btn" onClick={nextMonth}>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="9 18 15 12 9 6"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <button className="sc-today-btn" onClick={goToToday}>오늘</button>
                     </div>
 
-                    <div className="calendar-grid">
-                        {['일', '월', '화', '수', '목', '금', '토'].map(day => (
-                            <div key={day} className="calendar-day-header">{day}</div>
+                    <div className="sc-cal-grid">
+                        {['일', '월', '화', '수', '목', '금', '토'].map((day, i) => (
+                            <div key={day} className="sc-cal-dow" style={{ color: getDayColor(i === 0 ? 0 : i === 6 ? 6 : 1) }}>
+                                {day}
+                            </div>
                         ))}
                         {renderCalendarCells()}
                     </div>
+
+                    {/* Legend */}
+                    <div className="sc-cal-legend">
+                        <div className="sc-legend-item">
+                            <div className="sc-legend-dot" style={{ background: '#b08d2a' }}></div>
+                            예정 경기
+                        </div>
+                        <div className="sc-legend-item">
+                            <div className="sc-legend-dot" style={{ background: '#16a34a' }}></div>
+                            승
+                        </div>
+                        <div className="sc-legend-item">
+                            <div className="sc-legend-dot" style={{ background: '#d97706' }}></div>
+                            무
+                        </div>
+                        <div className="sc-legend-item">
+                            <div className="sc-legend-dot" style={{ background: '#dc2626' }}></div>
+                            패
+                        </div>
+                    </div>
                 </div>
 
-                {/* 오른쪽 사이드바 */}
-                <div>
+                {/* ===== 오른쪽 사이드바 ===== */}
+                <div className="sc-sidebar">
+                    {/* 경기 카드 또는 빈 상태 */}
                     {selectedMatch ? (
-                        <div className="match-detail-card">
-                            <div style={{ textAlign: 'center', marginBottom: '16px' }}>
-                                <div style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginBottom: '8px' }}>
-                                    {selectedMatch.matchDate}
-                                    {selectedMatch.matchTime && ` ${selectedMatch.matchTime}`}
-                                    {selectedMatch.matchEndTime && `~${selectedMatch.matchEndTime}`}
-                                    {selectedMatch.location && ` · ${selectedMatch.location}`}
-                                </div>
-                                <div className="teams">
-                                    <span className="team-name">창우FC</span>
-                                    <span className="score-display">
-                                        {selectedMatch.ourScore ?? '-'} : {selectedMatch.opponentScore ?? '-'}
-                                    </span>
-                                    <span className="team-name">{selectedMatch.opponent}</span>
-                                </div>
-                                {getResult(selectedMatch) !== 'upcoming' ? (
-                                    <span className={`result-badge result-${getResult(selectedMatch)}`}>
-                                        {getResultLabel(getResult(selectedMatch))}
-                                    </span>
-                                ) : (
-                                    <span className="result-badge result-upcoming">예정</span>
-                                )}
-                                {selectedMatch.memo && (
-                                    <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: '8px' }}>
-                                        메모: {selectedMatch.memo}
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* 골 기록자 */}
-                            {goalScorers.length > 0 && (
-                                <div className="goal-list">
-                                    <div style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: '8px', color: 'var(--color-dark)' }}>
-                                        득점 기록
-                                    </div>
-                                    {goalScorers.map((stat, i) => (
-                                        <div key={i} className="goal-item">
-                                            <span className="goal-icon">⚽</span>
-                                            <span>{stat.member?.name || '선수'}</span>
-                                            <span style={{ color: 'var(--color-text-muted)' }}>
-                                                ({stat.goals}골)
-                                            </span>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-
-                            {/* 출전 선수 목록 */}
-                            {matchStats.length > 0 && (
-                                <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--color-border)' }}>
-                                    <div style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: '8px', color: 'var(--color-dark)' }}>
-                                        출전 선수 ({matchStats.length}명)
-                                    </div>
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                                        {matchStats.map((stat, i) => (
-                                            <span key={i} style={{
-                                                fontSize: '0.75rem',
-                                                padding: '2px 8px',
-                                                borderRadius: '12px',
-                                                backgroundColor: 'var(--color-light)',
-                                                color: 'var(--color-dark)',
-                                            }}>
-                                                {stat.member?.name || '선수'}
-                                                {stat.quarters > 0 && ` (${stat.quarters}Q)`}
-                                            </span>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* 액션 버튼 */}
-                            <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
-                                {getResult(selectedMatch) === 'upcoming' ? (
-                                    <button
-                                        className="btn btn-gold"
-                                        style={{ flex: 1, fontSize: '0.85rem' }}
-                                        onClick={openResultForm}
-                                    >
-                                        결과 입력
-                                    </button>
-                                ) : (
-                                    <button
-                                        className="btn btn-outline"
-                                        style={{ flex: 1, fontSize: '0.85rem' }}
-                                        onClick={openResultForm}
-                                    >
-                                        결과 수정
-                                    </button>
-                                )}
-                                <button
-                                    className="btn btn-outline"
-                                    style={{ fontSize: '0.85rem', color: 'var(--color-lose)' }}
-                                    onClick={handleDeleteMatch}
-                                >
-                                    삭제
-                                </button>
-                            </div>
-                        </div>
+                        renderMatchCard(selectedMatch)
+                    ) : featuredMatch && !selectedDate ? (
+                        renderMatchCard(featuredMatch)
                     ) : selectedDate ? (
-                        <div className="match-detail-card" style={{ textAlign: 'center', color: 'var(--color-text-muted)' }}>
-                            <p style={{ padding: '20px' }}>
-                                {month + 1}월 {selectedDate}일에는 경기가 없습니다.
-                            </p>
-                            <button
-                                className="btn btn-gold"
-                                style={{ fontSize: '0.85rem' }}
-                                onClick={openRegisterForm}
-                            >
+                        <div className="sc-empty-card">
+                            <p>{month + 1}월 {selectedDate}일에는 경기가 없습니다.</p>
+                            <button className="sc-empty-register" onClick={openRegisterForm}>
                                 이 날짜에 일정 등록
                             </button>
                         </div>
                     ) : (
-                        <div className="match-detail-card" style={{ textAlign: 'center', color: 'var(--color-text-muted)' }}>
-                            <p style={{ padding: '20px' }}>
-                                날짜를 선택하면 경기 정보가 표시됩니다.
-                            </p>
+                        <div className="sc-empty-card">
+                            <p>날짜를 선택하면 경기 정보가 표시됩니다.</p>
                         </div>
                     )}
 
+                    {/* 이번 달 일정 리스트 */}
+                    {renderMonthlyList()}
                 </div>
             </div>
 
@@ -603,7 +1186,7 @@ function Schedule() {
                                             required
                                         >
                                             <option value="">일</option>
-                                            {Array.from({ length: getDaysInMonth(dateYear, dateMonth) }, (_, i) => i + 1).map(d => (
+                                            {Array.from({ length: getDaysInMonthForSelect(dateYear, dateMonth) }, (_, i) => i + 1).map(d => (
                                                 <option key={d} value={String(d).padStart(2, '0')}>{d}일</option>
                                             ))}
                                         </select>
@@ -769,7 +1352,7 @@ function Schedule() {
 
                             {/* 개인 기록 입력 */}
                             <div style={{ marginTop: '20px' }}>
-                                <div style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: '12px', color: 'var(--color-dark)' }}>
+                                <div style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: '12px', color: 'var(--color-text)' }}>
                                     개인 기록 (출전 선수 체크 후 기록 입력)
                                 </div>
 

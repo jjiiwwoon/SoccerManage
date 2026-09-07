@@ -38,7 +38,9 @@ function Navigation() {
         <nav className="main-nav">
             <div className="nav-inner">
                 <Link to="/" className="nav-brand">
-                    <span className="brand-icon">⚽</span>
+                    <span className="brand-icon">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg>
+                    </span>
                     <span className="brand-text">창우FC</span>
                 </Link>
 
@@ -46,7 +48,7 @@ function Navigation() {
                     className="mobile-toggle"
                     onClick={() => setMobileOpen(!mobileOpen)}
                 >
-                    ☰
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
                 </button>
 
                 <div className={`nav-links ${mobileOpen ? 'open' : ''}`}>

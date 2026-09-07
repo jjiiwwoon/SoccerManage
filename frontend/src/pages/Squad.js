@@ -13,11 +13,15 @@
  * - 선수 가나다순 정렬
  * - 선수 편집 모달 (이름, 등번호, 포지션, 사진 수정/삭제)
  * - 선수 검색 기능 (이름, 등번호)
+ * - 디자인 캔버스 레이아웃: 수평 카드, 포지션 컬러 좌측 보더,
+ *   64x64 아바타, 큰 투명 등번호, 미니 스탯 라인
+ * - 선수별 출전/골/도움 스탯 표시
  */
 import React, { useState, useEffect, useRef } from 'react';
 import {
     getMembers, createMemberWithPhoto, updateMemberWithPhoto, deleteMember
 } from '../api/memberApi';
+import { getMatches, getMatchStats } from '../api/matchApi';
 
 function Squad() {
     const [members, setMembers] = useState([]);
@@ -25,6 +29,7 @@ function Squad() {
     const [filter, setFilter] = useState('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [showForm, setShowForm] = useState(false);
+    const [playerMatchStats, setPlayerMatchStats] = useState({});
 
     // 등록 폼
     const [newMember, setNewMember] = useState({
@@ -53,6 +58,12 @@ function Squad() {
         fetchMembers();
     }, []);
 
+    // 멤버가 로드된 후 선수별 매치 스탯 계산
+    useEffect(() => {
+        if (members.length === 0) return;
+        fetchPlayerStats();
+    }, [members]);
+
     async function fetchMembers() {
         try {
             setLoading(true);
@@ -62,6 +73,38 @@ function Squad() {
             console.error('멤버 로딩 실패:', err);
         } finally {
             setLoading(false);
+        }
+    }
+
+    async function fetchPlayerStats() {
+        try {
+            const matchesData = await getMatches();
+            const completedMatches = matchesData.filter(m => m.ourScore != null && m.opponentScore != null);
+
+            const stats = {};
+            members.forEach(member => {
+                stats[member.id] = { matches: 0, goals: 0, assists: 0 };
+            });
+
+            for (const match of completedMatches) {
+                try {
+                    const matchStats = await getMatchStats(match.id);
+                    matchStats.forEach(stat => {
+                        const memberId = stat.member?.id || stat.memberId;
+                        if (stats[memberId]) {
+                            stats[memberId].matches += 1;
+                            stats[memberId].goals += (stat.goals || 0);
+                            stats[memberId].assists += (stat.assists || 0);
+                        }
+                    });
+                } catch (err) {
+                    // 개별 경기 스탯 로딩 실패 시 건너뜀
+                }
+            }
+
+            setPlayerMatchStats(stats);
+        } catch (err) {
+            console.error('선수 스탯 로딩 실패:', err);
         }
     }
 
@@ -78,6 +121,16 @@ function Squad() {
     function getPositionClass(position) {
         const label = getPositionLabel(position);
         return `badge-${label.toLowerCase()}`;
+    }
+
+    // 포지션 컬러 (인라인 스타일용)
+    function getPositionColor(position) {
+        const label = getPositionLabel(position);
+        if (label === 'GK') return '#b08d2a';
+        if (label === 'DF') return '#2563eb';
+        if (label === 'MF') return '#16a34a';
+        if (label === 'FW') return '#dc2626';
+        return '#8b95a5';
     }
 
     // 포지션별 인원수
@@ -224,7 +277,10 @@ function Squad() {
     return (
         <div className="squad-page">
             <div className="page-header">
-                <h1 className="page-title">스쿼드</h1>
+                <div>
+                    <h1 className="page-title">스쿼드</h1>
+                    <div className="page-subtitle">SQUAD &middot; {members.length}명</div>
+                </div>
                 <button
                     className="btn btn-gold"
                     onClick={() => setShowForm(!showForm)}
@@ -272,40 +328,64 @@ function Squad() {
                 </div>
             </div>
 
-            {/* 선수 카드 그리드 */}
-            <div className="player-grid">
+            {/* 선수 카드 그리드 - 3열 */}
+            <div className="sq-player-grid">
                 {filteredMembers.length === 0 ? (
                     <p style={{ color: 'var(--color-text-muted)', padding: '40px', textAlign: 'center', gridColumn: '1 / -1' }}>
                         {searchQuery ? `"${searchQuery}" 검색 결과가 없습니다.` : '등록된 선수가 없습니다.'}
                     </p>
                 ) : (
-                    filteredMembers.map(member => (
-                        <div
-                            key={member.id}
-                            className="player-card"
-                            onClick={() => openEditModal(member)}
-                            style={{ cursor: 'pointer' }}
-                        >
-                            <div className="player-avatar">
-                                {member.profilePhoto ? (
-                                    <img
-                                        src={member.profilePhoto}
-                                        alt={member.name}
-                                        className="player-avatar-img"
-                                    />
-                                ) : (
-                                    '👤'
-                                )}
+                    filteredMembers.map(member => {
+                        const posColor = getPositionColor(member.position);
+                        const stats = playerMatchStats[member.id] || { matches: 0, goals: 0, assists: 0 };
+                        return (
+                            <div
+                                key={member.id}
+                                className="sq-player-card"
+                                onClick={() => openEditModal(member)}
+                                style={{
+                                    cursor: 'pointer',
+                                    borderLeft: `3px solid ${posColor}`,
+                                }}
+                            >
+                                <div
+                                    className="sq-player-avatar"
+                                    style={{
+                                        background: `linear-gradient(135deg, ${posColor}33, ${posColor}11)`,
+                                    }}
+                                >
+                                    {member.profilePhoto ? (
+                                        <img
+                                            src={member.profilePhoto}
+                                            alt={member.name}
+                                            className="sq-player-avatar-img"
+                                        />
+                                    ) : (
+                                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                    )}
+                                </div>
+                                <div className="sq-player-info">
+                                    <div className="sq-player-name-row">
+                                        <span
+                                            className="sq-back-number"
+                                            style={{ color: `${posColor}26` }}
+                                        >
+                                            {member.backNumber || '-'}
+                                        </span>
+                                        <span className="sq-player-name">{member.name}</span>
+                                    </div>
+                                    <div className="sq-player-meta">
+                                        <span className={`badge ${getPositionClass(member.position)}`}>
+                                            {getPositionLabel(member.position)}
+                                        </span>
+                                        <span className="sq-mini-stats">
+                                            출전 {stats.matches} &middot; 골 {stats.goals} &middot; 도움 {stats.assists}
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
-                            <div className="player-name">{member.name}</div>
-                            <div className="player-number">
-                                No.{member.backNumber || '-'}
-                            </div>
-                            <span className={`badge ${getPositionClass(member.position)}`}>
-                                {getPositionLabel(member.position)}
-                            </span>
-                        </div>
-                    ))
+                        );
+                    })
                 )}
             </div>
 
@@ -323,7 +403,7 @@ function Squad() {
                                 <img src={profilePreview} alt="미리보기" className="profile-upload-img" />
                             ) : (
                                 <div className="profile-upload-placeholder">
-                                    <span style={{ fontSize: '2rem' }}>📷</span>
+                                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
                                     <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: '4px' }}>
                                         사진 추가
                                     </span>
@@ -426,7 +506,7 @@ function Squad() {
                                         <img src={editPhotoPreview} alt="프로필" className="profile-upload-img" />
                                     ) : (
                                         <div className="profile-upload-placeholder">
-                                            <span style={{ fontSize: '2rem' }}>📷</span>
+                                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
                                             <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: '4px' }}>
                                                 사진 추가
                                             </span>
