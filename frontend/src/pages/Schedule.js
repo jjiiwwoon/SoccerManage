@@ -27,7 +27,7 @@ const scStyles = `
     background: var(--color-surface, #fff);
     border-radius: 12px;
     border: 1px solid var(--color-border, #e5e7eb);
-    padding: 20px;
+    padding: 24px;
 }
 
 .sc-cal-header {
@@ -61,28 +61,13 @@ const scStyles = `
 }
 
 .sc-cal-title {
-    font-size: 1.1rem;
+    font-size: 1.2rem;
     font-weight: 700;
     color: var(--color-text, #1a1a2e);
-    min-width: 120px;
+    min-width: 130px;
     text-align: center;
 }
 
-.sc-today-btn {
-    background: none;
-    border: 1px solid var(--color-gold, #b08d2a);
-    color: var(--color-gold, #b08d2a);
-    border-radius: 6px;
-    padding: 4px 14px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.15s;
-}
-.sc-today-btn:hover {
-    background: var(--color-gold, #b08d2a);
-    color: #fff;
-}
 
 /* Calendar Grid */
 .sc-cal-grid {
@@ -93,9 +78,9 @@ const scStyles = `
 
 .sc-cal-dow {
     text-align: center;
-    font-size: 0.75rem;
+    font-size: 0.8rem;
     font-weight: 600;
-    padding: 8px 0;
+    padding: 10px 0;
     color: #8b95a5;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -106,12 +91,15 @@ const scStyles = `
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    gap: 4px;
+    justify-content: flex-start;
+    gap: 0;
     cursor: pointer;
     border-radius: 8px;
-    transition: background 0.15s;
+    transition: background 0.15s, border-color 0.15s;
     position: relative;
+    padding: 5px 3px 3px;
+    overflow: hidden;
+    border: 2px solid transparent;
 }
 .sc-cal-cell:hover {
     background: var(--color-light, #f3f4f6);
@@ -127,18 +115,60 @@ const scStyles = `
 .sc-cal-cell.sc-cal-selected {
     background: rgba(176, 141, 42, 0.12);
 }
-
-.sc-cal-day {
-    font-size: 0.85rem;
-    font-weight: 500;
-    line-height: 1;
+.sc-cal-cell.sc-cal-completed {
+    border-color: #b0b8c4;
+    background: rgba(139, 149, 165, 0.04);
+}
+.sc-cal-cell.sc-cal-upcoming {
+    border-color: #3b82f6;
+    background: rgba(59, 130, 246, 0.04);
 }
 
-.sc-cal-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    flex-shrink: 0;
+.sc-cal-day {
+    font-size: 0.88rem;
+    font-weight: 600;
+    line-height: 1;
+    margin-bottom: auto;
+}
+
+.sc-cal-match-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    gap: 2px;
+    width: 100%;
+    padding-bottom: 2px;
+}
+
+.sc-cal-match-vs {
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: var(--color-text, #1a1a2e);
+    line-height: 1.3;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+.sc-cal-match-result {
+    font-size: 0.65rem;
+    font-weight: 700;
+    line-height: 1.2;
+    border-radius: 3px;
+    padding: 1px 5px;
+}
+
+.sc-cal-match-label {
+    font-size: 0.6rem;
+    font-weight: 700;
+    color: #3b82f6;
+    line-height: 1.2;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
 }
 
 /* Legend */
@@ -294,19 +324,18 @@ const scStyles = `
     border-radius: 6px;
 }
 
-/* Match actions */
-.sc-match-actions {
+/* Match card header (date + action button) */
+.sc-match-header {
     display: flex;
-    gap: 8px;
-    margin-top: 14px;
-    padding-top: 12px;
-    border-top: 1px solid var(--color-border, #e5e7eb);
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
 }
-.sc-match-actions button {
-    flex: 1;
-    padding: 7px 0;
+
+.sc-match-header-btn {
+    padding: 4px 12px;
     border-radius: 6px;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.15s;
@@ -314,23 +343,83 @@ const scStyles = `
     background: none;
     color: var(--color-text, #1a1a2e);
 }
-.sc-match-actions button:hover {
+.sc-match-header-btn:hover {
     background: var(--color-light, #f3f4f6);
 }
-.sc-match-actions .sc-btn-primary {
+.sc-match-header-btn.sc-btn-primary {
     background: var(--color-gold, #b08d2a);
     color: #fff;
     border-color: var(--color-gold, #b08d2a);
 }
-.sc-match-actions .sc-btn-primary:hover {
+.sc-match-header-btn.sc-btn-primary:hover {
     opacity: 0.9;
 }
+
+/* Match actions (delete) */
+.sc-match-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--color-border, #e5e7eb);
+}
+
 .sc-match-actions .sc-btn-danger {
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    background: none;
     color: #dc2626;
-    border-color: rgba(239, 68, 68, 0.3);
 }
 .sc-match-actions .sc-btn-danger:hover {
     background: rgba(239, 68, 68, 0.06);
+}
+
+/* Goal scorers list */
+.sc-scorers-section {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--color-border, #e5e7eb);
+}
+.sc-scorers-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #8b95a5;
+    margin-bottom: 8px;
+    letter-spacing: 0.3px;
+}
+.sc-scorers-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.sc-scorer-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 8px;
+    border-radius: 6px;
+    background: var(--color-light, #f3f4f6);
+}
+.sc-scorer-name {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--color-text, #1a1a2e);
+}
+.sc-scorer-goals {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--color-gold, #b08d2a);
+}
+.sc-no-scorers {
+    font-size: 0.78rem;
+    color: #8b95a5;
+    text-align: center;
+    padding: 4px 0;
 }
 
 /* Empty sidebar card */
@@ -434,6 +523,15 @@ const scStyles = `
 @media (max-width: 800px) {
     .sc-layout {
         grid-template-columns: 1fr;
+    }
+    .sc-cal-match-vs {
+        font-size: 0.58rem;
+    }
+    .sc-cal-match-result {
+        font-size: 0.55rem;
+    }
+    .sc-cal-match-label {
+        font-size: 0.52rem;
     }
 }
 `;
@@ -731,6 +829,7 @@ function Schedule() {
             opponentScore: selectedMatch.opponentScore ?? '',
         });
         // 선수 목록으로 스탯 입력 폼 초기화
+        const isEdit = getResult(selectedMatch) !== 'upcoming';
         const inputs = members.map(member => {
             // 기존 스탯이 있으면 채우기
             const existing = matchStats.find(s =>
@@ -741,12 +840,21 @@ function Schedule() {
                 name: member.name,
                 position: member.position,
                 backNumber: member.backNumber,
-                played: existing ? true : false,
+                played: isEdit ? (existing ? true : false) : true,
                 goals: existing?.goals || 0,
                 assists: existing?.assists || 0,
                 quarters: existing?.quarters || 0,
             };
         });
+        // 가나다순 정렬, 수정모드에서는 참가자 먼저
+        if (isEdit) {
+            inputs.sort((a, b) => {
+                if (a.played !== b.played) return a.played ? -1 : 1;
+                return a.name.localeCompare(b.name, 'ko');
+            });
+        } else {
+            inputs.sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+        }
         setPlayerStatInputs(inputs);
         setShowResultForm(true);
     }
@@ -866,9 +974,13 @@ function Schedule() {
             const isSelected = day === selectedDate;
             const dayOfWeek = new Date(year, month, day).getDay();
 
+            const result = match ? getResult(match) : null;
+
             let cellClass = 'sc-cal-cell';
             if (isToday) cellClass += ' sc-cal-today';
             if (isSelected) cellClass += ' sc-cal-selected';
+            if (match && result === 'upcoming') cellClass += ' sc-cal-upcoming';
+            if (match && result !== 'upcoming') cellClass += ' sc-cal-completed';
 
             cells.push(
                 <div
@@ -878,7 +990,21 @@ function Schedule() {
                 >
                     <span className="sc-cal-day" style={{ color: getDayColor(dayOfWeek) }}>{day}</span>
                     {match && (
-                        <div className="sc-cal-dot" style={{ background: getDotColor(match) }}></div>
+                        <div className="sc-cal-match-info">
+                            {result === 'upcoming' ? (
+                                <>
+                                    <span className="sc-cal-match-label">Match Day</span>
+                                    <span className="sc-cal-match-vs">vs {match.opponent}</span>
+                                </>
+                            ) : (
+                                <>
+                                    <span className="sc-cal-match-vs">vs {match.opponent}</span>
+                                    <span className="sc-cal-match-result" style={{ color: getResultColor(result) }}>
+                                        {getResultLabel(result)}
+                                    </span>
+                                </>
+                            )}
+                        </div>
                     )}
                 </div>
             );
@@ -911,8 +1037,19 @@ function Schedule() {
                     style={{ background: getResultGradient(result) }}
                 ></div>
                 <div className="sc-match-body">
-                    {/* Date */}
-                    <div className="sc-match-date">{formatMatchDate(match.matchDate)}</div>
+                    {/* Header: Date + Action Button */}
+                    <div className="sc-match-header">
+                        <div className="sc-match-date" style={{ marginBottom: 0 }}>{formatMatchDate(match.matchDate)}</div>
+                        {isUpcoming ? (
+                            <button className="sc-match-header-btn sc-btn-primary" onClick={openResultForm}>
+                                결과 입력
+                            </button>
+                        ) : (
+                            <button className="sc-match-header-btn" onClick={openResultForm}>
+                                결과 수정
+                            </button>
+                        )}
+                    </div>
 
                     {/* Status for upcoming */}
                     {isUpcoming && (
@@ -968,17 +1105,32 @@ function Schedule() {
                         )}
                     </div>
 
-                    {/* Actions */}
+                    {/* Goal Scorers (for completed matches) */}
+                    {!isUpcoming && (() => {
+                        const scorers = matchStats
+                            .filter(s => s.goals > 0)
+                            .sort((a, b) => b.goals - a.goals || (a.member?.name || '').localeCompare(b.member?.name || '', 'ko'));
+                        return (
+                            <div className="sc-scorers-section">
+                                <div className="sc-scorers-title">득점자</div>
+                                {scorers.length > 0 ? (
+                                    <div className="sc-scorers-list">
+                                        {scorers.map((s, i) => (
+                                            <div key={i} className="sc-scorer-item">
+                                                <span className="sc-scorer-name">{s.member?.name || '알 수 없음'}</span>
+                                                <span className="sc-scorer-goals">{s.goals}골</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="sc-no-scorers">득점 기록 없음</div>
+                                )}
+                            </div>
+                        );
+                    })()}
+
+                    {/* Delete button */}
                     <div className="sc-match-actions">
-                        {isUpcoming ? (
-                            <button className="sc-btn-primary" onClick={openResultForm}>
-                                결과 입력
-                            </button>
-                        ) : (
-                            <button onClick={openResultForm}>
-                                결과 수정
-                            </button>
-                        )}
                         <button className="sc-btn-danger" onClick={handleDeleteMatch}>
                             삭제
                         </button>
@@ -1074,7 +1226,6 @@ function Schedule() {
                                 </svg>
                             </button>
                         </div>
-                        <button className="sc-today-btn" onClick={goToToday}>오늘</button>
                     </div>
 
                     <div className="sc-cal-grid">
@@ -1127,8 +1278,6 @@ function Schedule() {
                         </div>
                     )}
 
-                    {/* 이번 달 일정 리스트 */}
-                    {renderMonthlyList()}
                 </div>
             </div>
 
@@ -1353,14 +1502,33 @@ function Schedule() {
                             {/* 개인 기록 입력 */}
                             <div style={{ marginTop: '20px' }}>
                                 <div style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: '12px', color: 'var(--color-text)' }}>
-                                    개인 기록 (출전 선수 체크 후 기록 입력)
+                                    개인 기록 (참가 선수 체크 후 기록 입력)
                                 </div>
 
                                 <div className="stat-input-table-wrap">
                                     <table className="stat-input-table">
                                         <thead>
                                             <tr>
-                                                <th style={{ width: '40px' }}>출전</th>
+                                                <th style={{ width: '40px' }}>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                                                        <span>참가</span>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={playerStatInputs.length > 0 && playerStatInputs.every(p => p.played)}
+                                                            onChange={(e) => {
+                                                                const allChecked = e.target.checked;
+                                                                setPlayerStatInputs(prev => prev.map(p => ({
+                                                                    ...p,
+                                                                    played: allChecked,
+                                                                    goals: allChecked ? p.goals : 0,
+                                                                    assists: allChecked ? p.assists : 0,
+                                                                    quarters: allChecked ? p.quarters : 0,
+                                                                })));
+                                                            }}
+                                                            title="전체 선택/해제"
+                                                        />
+                                                    </div>
+                                                </th>
                                                 <th>선수</th>
                                                 <th style={{ width: '50px' }}>포지션</th>
                                                 <th style={{ width: '60px' }}>쿼터</th>
@@ -1369,60 +1537,80 @@ function Schedule() {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {playerStatInputs.map((player, index) => (
-                                                <tr key={player.memberId} style={{
-                                                    opacity: player.played ? 1 : 0.5,
-                                                }}>
-                                                    <td style={{ textAlign: 'center' }}>
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={player.played}
-                                                            onChange={(e) => handlePlayerStatChange(index, 'played', e.target.checked)}
-                                                        />
-                                                    </td>
-                                                    <td>
-                                                        <span style={{ fontWeight: 600 }}>
-                                                            #{player.backNumber} {player.name}
-                                                        </span>
-                                                    </td>
-                                                    <td>
-                                                        <span className={`badge ${getPositionClass(player.position)}`} style={{ fontSize: '0.7rem' }}>
-                                                            {getPositionLabel(player.position)}
-                                                        </span>
-                                                    </td>
-                                                    <td>
-                                                        <input
-                                                            type="number"
-                                                            className="stat-mini-input"
-                                                            min="0"
-                                                            max="4"
-                                                            value={player.quarters}
-                                                            onChange={(e) => handlePlayerStatChange(index, 'quarters', e.target.value)}
-                                                            disabled={!player.played}
-                                                        />
-                                                    </td>
-                                                    <td>
-                                                        <input
-                                                            type="number"
-                                                            className="stat-mini-input"
-                                                            min="0"
-                                                            value={player.goals}
-                                                            onChange={(e) => handlePlayerStatChange(index, 'goals', e.target.value)}
-                                                            disabled={!player.played}
-                                                        />
-                                                    </td>
-                                                    <td>
-                                                        <input
-                                                            type="number"
-                                                            className="stat-mini-input"
-                                                            min="0"
-                                                            value={player.assists}
-                                                            onChange={(e) => handlePlayerStatChange(index, 'assists', e.target.value)}
-                                                            disabled={!player.played}
-                                                        />
-                                                    </td>
-                                                </tr>
-                                            ))}
+                                            {(() => {
+                                                const isEditMode = getResult(selectedMatch) !== 'upcoming';
+                                                const firstNonPlayedIdx = isEditMode ? playerStatInputs.findIndex(p => !p.played) : -1;
+                                                return playerStatInputs.map((player, index) => (
+                                                    <React.Fragment key={player.memberId}>
+                                                        {isEditMode && index === firstNonPlayedIdx && firstNonPlayedIdx > 0 && (
+                                                            <tr>
+                                                                <td colSpan="6" style={{
+                                                                    textAlign: 'center',
+                                                                    fontSize: '0.75rem',
+                                                                    fontWeight: 600,
+                                                                    color: '#8b95a5',
+                                                                    padding: '8px 0 4px',
+                                                                    borderBottom: '1px solid var(--color-border, #e5e7eb)',
+                                                                }}>
+                                                                    — 불참 —
+                                                                </td>
+                                                            </tr>
+                                                        )}
+                                                        <tr style={{
+                                                            opacity: player.played ? 1 : 0.5,
+                                                        }}>
+                                                            <td style={{ textAlign: 'center' }}>
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={player.played}
+                                                                    onChange={(e) => handlePlayerStatChange(index, 'played', e.target.checked)}
+                                                                />
+                                                            </td>
+                                                            <td>
+                                                                <span style={{ fontWeight: 600 }}>
+                                                                    No.{player.backNumber} {player.name}
+                                                                </span>
+                                                            </td>
+                                                            <td>
+                                                                <span className={`badge ${getPositionClass(player.position)}`} style={{ fontSize: '0.7rem' }}>
+                                                                    {getPositionLabel(player.position)}
+                                                                </span>
+                                                            </td>
+                                                            <td>
+                                                                <input
+                                                                    type="number"
+                                                                    className="stat-mini-input"
+                                                                    min="0"
+                                                                    max="4"
+                                                                    value={player.quarters}
+                                                                    onChange={(e) => handlePlayerStatChange(index, 'quarters', e.target.value)}
+                                                                    disabled={!player.played}
+                                                                />
+                                                            </td>
+                                                            <td>
+                                                                <input
+                                                                    type="number"
+                                                                    className="stat-mini-input"
+                                                                    min="0"
+                                                                    value={player.goals}
+                                                                    onChange={(e) => handlePlayerStatChange(index, 'goals', e.target.value)}
+                                                                    disabled={!player.played}
+                                                                />
+                                                            </td>
+                                                            <td>
+                                                                <input
+                                                                    type="number"
+                                                                    className="stat-mini-input"
+                                                                    min="0"
+                                                                    value={player.assists}
+                                                                    onChange={(e) => handlePlayerStatChange(index, 'assists', e.target.value)}
+                                                                    disabled={!player.played}
+                                                                />
+                                                            </td>
+                                                        </tr>
+                                                    </React.Fragment>
+                                                ));
+                                            })()}
                                         </tbody>
                                     </table>
                                 </div>

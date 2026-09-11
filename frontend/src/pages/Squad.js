@@ -370,7 +370,7 @@ function Squad() {
                                             className="sq-back-number"
                                             style={{ color: `${posColor}26` }}
                                         >
-                                            {member.backNumber || '-'}
+                                            No.{member.backNumber || '-'}
                                         </span>
                                         <span className="sq-player-name">{member.name}</span>
                                     </div>

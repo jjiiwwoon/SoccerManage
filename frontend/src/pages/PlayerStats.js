@@ -7,9 +7,9 @@
  *
  * Design canvas 기반 리팩터링:
  * - HTML table -> CSS Grid 기반 div 레이아웃
- * - 컬럼: # | 선수 | 출전 | 골 | 도움 | 공격P | MOM | 출석률 | 경기당 골
+ * - 컬럼: # | 선수 | 출전 | 쿼터 | 골 | 도움 | 공격P | MOM | 출석률 | 경기당 골
  * - 포지션 컬러 아바타 (36x36), 상세패널 (56x56)
- * - 정렬 드롭다운 버튼
+ * - 각 컬럼 헤더 클릭 시 오름차순/내림차순 정렬
  * - 클릭 시 하단 상세 패널 (경기별 기록 포함)
  * - 탑 스코어러 골드 하이라이트
  * - CSS 클래스 접두사: ps-
@@ -51,19 +51,17 @@ function getPositionClass(position) {
     return '';
 }
 
-// 정렬 옵션 정의
-const SORT_OPTIONS = [
+// 컬럼 정의 (헤더 클릭 정렬용)
+const COLUMNS = [
+    { key: 'matches', label: '출전' },
+    { key: 'quarters', label: '쿼터' },
     { key: 'goals', label: '골' },
     { key: 'assists', label: '도움' },
     { key: 'attackPoints', label: '공격P' },
-    { key: 'matches', label: '출전' },
+    { key: 'mom', label: 'MOM' },
+    { key: 'attendance', label: '출석률' },
     { key: 'goalsPerGame', label: '경기당 골' },
 ];
-
-function getSortLabel(sortBy) {
-    const opt = SORT_OPTIONS.find(o => o.key === sortBy);
-    return opt ? opt.label : sortBy;
-}
 
 function PlayerStats() {
     const [members, setMembers] = useState([]);
@@ -75,7 +73,6 @@ function PlayerStats() {
     const [searchTerm, setSearchTerm] = useState('');
     const [sortBy, setSortBy] = useState('goals');
     const [sortDir, setSortDir] = useState('desc');
-    const [showSortMenu, setShowSortMenu] = useState(false);
     const [selectedPlayer, setSelectedPlayer] = useState(null);
 
     useEffect(() => {
@@ -172,19 +169,14 @@ function PlayerStats() {
         return `filter-tab active filter-tab-${tabKey}`;
     }
 
-    // 정렬 드롭다운 토글
-    function toggleSortMenu() {
-        setShowSortMenu(prev => !prev);
-    }
-
-    function handleSortSelect(key) {
+    // 컬럼 헤더 클릭 정렬
+    function handleHeaderSort(key) {
         if (sortBy === key) {
             setSortDir(prev => prev === 'desc' ? 'asc' : 'desc');
         } else {
             setSortBy(key);
             setSortDir('desc');
         }
-        setShowSortMenu(false);
     }
 
     // 선수 선택
@@ -235,7 +227,7 @@ function PlayerStats() {
         const gradient = `linear-gradient(135deg, ${color}33, ${color}66)`;
 
         if (player.profilePhoto) {
-            const photoUrl = player.profilePhoto.startsWith('http')
+            const photoUrl = player.profilePhoto.startsWith('data:') || player.profilePhoto.startsWith('http')
                 ? player.profilePhoto
                 : `${API_URL.replace('/api', '')}${player.profilePhoto}`;
             return (
@@ -328,45 +320,24 @@ function PlayerStats() {
                 {/* 테이블 헤더 영역 */}
                 <div className="ps-table-header-bar">
                     <span className="ps-subtitle">PLAYER STATS</span>
-                    <div className="ps-sort-wrapper" style={{ position: 'relative' }}>
-                        <div className="ps-sort-dropdown" onClick={toggleSortMenu}>
-                            정렬: {getSortLabel(sortBy)} 순
-                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ marginLeft: 4 }}>
-                                <path d="M3 5L6 8L9 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                            </svg>
-                        </div>
-                        {showSortMenu && (
-                            <div className="ps-sort-menu">
-                                {SORT_OPTIONS.map(opt => (
-                                    <div
-                                        key={opt.key}
-                                        className={`ps-sort-option ${sortBy === opt.key ? 'ps-sort-option-active' : ''}`}
-                                        onClick={() => handleSortSelect(opt.key)}
-                                    >
-                                        {opt.label}
-                                        {sortBy === opt.key && (
-                                            <span style={{ marginLeft: 'auto', opacity: 0.5 }}>
-                                                {sortDir === 'desc' ? '▼' : '▲'}
-                                            </span>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
                 </div>
 
-                {/* 그리드 테이블 헤더 */}
+                {/* 그리드 테이블 헤더 (클릭 정렬) */}
                 <div className="ps-table-head">
                     <div className="ps-col-rank">#</div>
                     <div className="ps-col-player">선수</div>
-                    <div className="ps-col-stat">출전</div>
-                    <div className="ps-col-stat ps-col-goals">골</div>
-                    <div className="ps-col-stat">도움</div>
-                    <div className="ps-col-stat">공격P</div>
-                    <div className="ps-col-stat">MOM</div>
-                    <div className="ps-col-stat ps-col-rate">출석률</div>
-                    <div className="ps-col-stat ps-col-gpg">경기당 골</div>
+                    {COLUMNS.map(col => (
+                        <div
+                            key={col.key}
+                            className={`ps-col-stat ps-col-sortable ${sortBy === col.key ? 'ps-col-sorted' : ''} ${col.key === 'goals' ? 'ps-col-goals' : ''} ${col.key === 'attendance' ? 'ps-col-rate' : ''} ${col.key === 'goalsPerGame' ? 'ps-col-gpg' : ''}`}
+                            onClick={() => handleHeaderSort(col.key)}
+                        >
+                            {col.label}
+                            {sortBy === col.key && (
+                                <span className="ps-sort-arrow">{sortDir === 'desc' ? ' ▼' : ' ▲'}</span>
+                            )}
+                        </div>
+                    ))}
                 </div>
 
                 {/* 그리드 테이블 바디 */}
@@ -383,7 +354,7 @@ function PlayerStats() {
                                 <div
                                     key={player.id}
                                     className={`ps-table-row ${isSelected ? 'ps-row-selected' : ''}`}
-                                    style={isTopScorer ? { background: 'rgba(200,168,78,0.03)' } : undefined}
+                                    style={isTopScorer ? { background: 'rgba(176,141,42,0.03)' } : undefined}
                                     onClick={() => selectPlayer(player)}
                                 >
                                     <div className="ps-col-rank">{ranks[index]}</div>
@@ -397,6 +368,7 @@ function PlayerStats() {
                                         </div>
                                     </div>
                                     <div className="ps-col-stat">{player.matches}</div>
+                                    <div className="ps-col-stat">{player.quarters}</div>
                                     <div className="ps-col-stat ps-col-goals">{player.goals}</div>
                                     <div className="ps-col-stat">{player.assists}</div>
                                     <div className="ps-col-stat">{player.attackPoints}</div>
@@ -425,7 +397,7 @@ function PlayerStats() {
                                 <span className={`badge ${getPositionClass(selectedPlayer.position)}`}>
                                     {getPositionLabel(selectedPlayer.position)}
                                 </span>
-                                <div className="ps-detail-title">#{selectedPlayer.backNumber}</div>
+                                <div className="ps-detail-title">No.{selectedPlayer.backNumber}</div>
                             </div>
                         </div>
                         <div className="ps-detail-big-stats">
@@ -494,82 +466,45 @@ function PlayerStats() {
                     text-transform: uppercase;
                 }
 
-                /* Sort Dropdown */
-                .ps-sort-wrapper {
-                    position: relative;
-                }
-                .ps-sort-dropdown {
-                    display: flex;
-                    align-items: center;
-                    gap: 4px;
-                    padding: 6px 12px;
-                    font-size: 12px;
-                    font-weight: 500;
-                    color: var(--color-text, #333);
-                    background: var(--color-bg-secondary, #f7f7f8);
-                    border: 1px solid var(--color-border, #e5e7eb);
-                    border-radius: 6px;
-                    cursor: pointer;
-                    user-select: none;
-                    transition: background 0.15s;
-                }
-                .ps-sort-dropdown:hover {
-                    background: var(--color-bg-hover, #ececee);
-                }
-                .ps-sort-menu {
-                    position: absolute;
-                    top: calc(100% + 4px);
-                    right: 0;
-                    min-width: 140px;
-                    background: var(--color-bg, #fff);
-                    border: 1px solid var(--color-border, #e5e7eb);
-                    border-radius: 8px;
-                    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
-                    z-index: 20;
-                    overflow: hidden;
-                }
-                .ps-sort-option {
-                    display: flex;
-                    align-items: center;
-                    padding: 8px 14px;
-                    font-size: 13px;
-                    cursor: pointer;
-                    color: var(--color-text, #333);
-                    transition: background 0.12s;
-                }
-                .ps-sort-option:hover {
-                    background: var(--color-bg-secondary, #f7f7f8);
-                }
-                .ps-sort-option-active {
-                    font-weight: 600;
-                    color: var(--color-primary, #2563eb);
-                }
-
-                /* Grid Columns: 52px 1fr 70px 70px 70px 70px 70px 70px 90px */
+                /* Grid Columns: # | 선수 | 출전 | 쿼터 | 골 | 도움 | 공격P | MOM | 출석률 | 경기당 골 */
                 .ps-table-head,
                 .ps-table-row {
                     display: grid;
-                    grid-template-columns: 52px 1fr 70px 70px 70px 70px 70px 70px 90px;
+                    grid-template-columns: 52px 1.4fr 80px 80px 80px 80px 88px 80px 88px 104px;
                     align-items: center;
-                    min-height: 44px;
+                    min-height: 56px;
                 }
                 .ps-table-head {
-                    padding: 0 16px;
+                    padding: 0 20px;
                     background: var(--color-bg-secondary, #f9fafb);
                     border-bottom: 1px solid var(--color-border, #e5e7eb);
-                    font-size: 11px;
+                    font-size: 13px;
                     font-weight: 600;
                     color: var(--color-text-muted, #999);
                     text-transform: uppercase;
                     letter-spacing: 0.5px;
-                    min-height: 36px;
+                    min-height: 48px;
+                }
+                .ps-col-sortable {
+                    cursor: pointer;
+                    user-select: none;
+                    transition: color 0.15s;
+                }
+                .ps-col-sortable:hover {
+                    color: var(--color-text, #333);
+                }
+                .ps-col-sorted {
+                    color: var(--color-gold, #b08d2a) !important;
+                }
+                .ps-sort-arrow {
+                    font-size: 10px;
                 }
                 .ps-table-body {
                     max-height: 600px;
                     overflow-y: auto;
                 }
                 .ps-table-row {
-                    padding: 6px 16px;
+                    padding: 8px 20px;
                     border-bottom: 1px solid var(--color-border-light, #f0f0f0);
                     cursor: pointer;
                     transition: background 0.12s;
@@ -584,7 +519,7 @@ function PlayerStats() {
 
                 /* Columns */
                 .ps-col-rank {
-                    font-size: 13px;
+                    font-size: 14px;
                     font-weight: 500;
                     color: var(--color-text-muted, #999);
                     text-align: center;
@@ -592,17 +527,18 @@ function PlayerStats() {
                 .ps-col-player {
                     display: flex;
                     align-items: center;
-                    gap: 10px;
+                    gap: 12px;
                     min-width: 0;
                 }
                 .ps-player-info {
                     display: flex;
-                    flex-direction: column;
-                    gap: 2px;
+                    flex-direction: row;
+                    align-items: center;
+                    gap: 8px;
                     min-width: 0;
                 }
                 .ps-player-name {
-                    font-size: 13px;
+                    font-size: 14px;
                     font-weight: 600;
                     color: var(--color-text, #222);
                     white-space: nowrap;
@@ -612,10 +548,11 @@ function PlayerStats() {
                 .ps-player-info .badge {
                     font-size: 10px;
                     width: fit-content;
+                    flex-shrink: 0;
                 }
                 .ps-col-stat {
                     text-align: center;
-                    font-size: 13px;
+                    font-size: 14px;
                     font-weight: 500;
                     color: var(--color-text, #333);
                 }
@@ -746,15 +683,15 @@ function PlayerStats() {
                 @media (max-width: 768px) {
                     .ps-table-head,
                     .ps-table-row {
-                        grid-template-columns: 36px 1fr 48px 48px 48px 48px 48px 56px 64px;
-                        padding: 6px 8px;
-                        font-size: 11px;
+                        grid-template-columns: 36px 1fr 52px 52px 52px 52px 60px 52px 60px 68px;
+                        padding: 6px 10px;
+                        font-size: 12px;
                     }
                     .ps-table-head {
-                        font-size: 10px;
+                        font-size: 11px;
                     }
                     .ps-col-stat {
-                        font-size: 12px;
+                        font-size: 13px;
                     }
                     .ps-detail-header {
                         padding: 16px;
